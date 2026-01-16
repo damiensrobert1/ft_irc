@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 14:18:20 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/16 16:36:39 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -223,7 +223,11 @@ void Server::handleCommand(int fd, const std::string& line)
 	{
 		Cmd cmd(c, p, clients, password, to_close);
 		cmd.pass();
-	//	cmd.tryRegister();
+		return;
+	}
+	if (p.cmd == "PING") {
+		std::string line = ":ircserv PONG ircserv :" + (p.hasTrailing ? p.trailing : "");
+		Utils::sendLine(fd, line, clients);
 		return;
 	}
 	
