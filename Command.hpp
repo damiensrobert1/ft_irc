@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 14:04:23 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/16 15:47:07 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,4 +34,5 @@ class Cmd
 	public:
 		Cmd(Client &c, const Parsed &p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close);
 		void pass();
+		void tryRegister();
 };

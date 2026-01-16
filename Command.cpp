@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 14:04:48 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/16 16:41:10 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,9 +50,27 @@ void Cmd::pass()
 	if (pass == password) {
 		client.authed = true;
 		sendNumeric(client.fd, "NOTICE", ":Password accepted.");
-	} else {
+	}
+	else
+	{
 		sendNumeric(client.fd, "464", ":Password incorrect");
 		markForClose(client.fd);
 	}
+	tryRegister();
 }
 
+void Cmd::tryRegister()
+{
+	if (client.registered)
+		return;
+	if (!client.authed)
+		return;
+	if (client.nick.empty() || client.user.empty())
+		return;
+
+	client.registered = true;
+
+	sendNumeric(client.fd, "001", ":Welcome to ft_irc " + client.prefix());
+	sendNumeric(client.fd, "002", ":Your host is ircserv");
+	sendNumeric(client.fd, "003", ":This server is a minimal ft_irc implementation");
+}
