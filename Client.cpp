@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 12:43:46 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/15 14:55:19 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/16 15:16:27 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,9 +18,16 @@ Client::Client()
 }
 
 Client::Client(int fd, std::string ip)
-	:fd(fd), ip(ip)
 {
-	(void)fd;
+	this->fd = fd;
+	this->ip = ip;
+	outbuf = "";
+	inbuf = "";
+	nick = "";
+	user = "";
+	realname = "";
+	registered = false;
+	authed = false;
 }
 
 std::string Client::prefix() const {
