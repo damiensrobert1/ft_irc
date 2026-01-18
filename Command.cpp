@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 16:41:10 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/16 18:53:32 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,11 @@
 
 #include "Command.hpp"
 #include "Server.hpp"
+#include "Channel.hpp"
 #include "Utils.hpp"
 
-Cmd::Cmd(Client& c, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close)
-	:client(c), parsed(p), clients(clients), password(password), to_close(to_close)
+Cmd::Cmd(Client& c, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels)
+	:client(c), parsed(p), clients(clients), password(password), to_close(to_close), channels(channels)
 {
 }
 
@@ -57,6 +58,86 @@ void Cmd::pass()
 		markForClose(client.fd);
 	}
 	tryRegister();
+}
+
+bool Cmd::nickInUse(const std::string& nick, int except_fd) const
+{
+	for (std::map<int, Client>::iterator it = clients.begin();
+			it != clients.end();
+			++it)
+	{
+		if (it->first == except_fd)
+			continue;
+		if (Utils::toUpper(it->second.nick) == Utils::toUpper(nick))
+			return true;
+	}
+	return false;
+}
+
+#include <iostream>
+
+void Cmd::nick()
+{
+	if (parsed.args.empty() && !parsed.hasTrailing)
+	{
+		sendNumeric(client.fd, "431", ":No nickname given");
+		return;
+	}
+	std::string newNick = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+	if (newNick.empty())
+	{
+		sendNumeric(client.fd, "432", ":Erroneous nickname");
+		return;
+	}
+
+	if (newNick.size() > 30)
+		newNick.resize(30);
+	
+	if (nickInUse(newNick, client.fd))
+	{
+		sendNumeric(client.fd, "433", newNick + " :Nickname is already in use");
+		return;
+	}
+	
+	std::string oldNick = client.nick;
+	client.nick = newNick;
+	
+	if (!oldNick.empty()) {
+		for (std::map<std::string, Channel>::iterator it = channels.begin();
+     				it != channels.end();
+     				++it)
+		{
+			Channel& ch = it->second;
+			if (ch.isMember(client.fd)) {
+				for (std::set<int>::iterator it = ch.members.begin();
+					it != ch.members.end();
+					++it)
+				{
+					int mfd = *it;
+					if (mfd == client.fd)
+						continue;
+					Utils::sendLine(mfd, ":" + oldNick + "!" + client.user + "@" + client.ip + " NICK :" + client.nick, clients);
+				}
+			}
+		}
+	}
+	std::cout << "client nick : " << client.nick << std::endl;
+}
+
+void Cmd::user()
+{
+	if (parsed.args.size() < 3 || (!parsed.hasTrailing)) {
+		sendNumeric(client.fd, "461", "USER :Not enough parameters");
+		return;
+	}
+	if (!client.user.empty()) {
+		sendNumeric(client.fd, "462", ":You may not reregister");
+		return;
+	}
+	client.user = parsed.args[0];
+	client.realname = parsed.trailing;
+	std::cout << "user :" << client.user << "\n";
+	std::cout << "realname :" << client.realname << "\n";
 }
 
 void Cmd::tryRegister()
