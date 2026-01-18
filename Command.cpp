@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 20:34:15 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 22:18:11 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ void Cmd::pass()
 {
 	Client &client = clients[fd];
 	if (parsed.args.empty() && !parsed.hasTrailing) {
-		sendNumeric(client.fd, "461", "PASS :Not enough parameters");
+		sendNumeric(client.fd, "461", "PASS not enough parameters");
 		return;
 	}
 	if (client.registered) {
@@ -74,8 +74,6 @@ bool Cmd::nickInUse(const std::string& nick, int except_fd) const
 	}
 	return false;
 }
-
-#include <iostream>
 
 void Cmd::nick()
 {
