@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 17:25:10 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 17:29:06 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -251,6 +251,10 @@ void Server::handleCommand(int fd, const std::string& line)
 	if (p.cmd == "USERHOST") {
 		cmd.userHost();
 		cmd.tryRegister();
+	}
+	if (p.cmd == "PING") {
+		Utils::sendLine(fd, "PONG " + (p.hasTrailing ? p.trailing : ""), clients);
+		return;
 	}
 }
 
