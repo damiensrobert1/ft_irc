@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 15:00:00 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 15:34:28 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,4 +40,5 @@ class Cmd
 		void pass();
 		void nick();
 		void user();
+		void userHost();
 };

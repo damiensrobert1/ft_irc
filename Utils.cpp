@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:44:29 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 15:07:48 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 15:29:48 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,3 +41,16 @@ void Utils::sendLine(int fd, const std::string &line, std::map<int, Client> &cli
 {
         queueSend(fd, line + "\r\n", clients);
 }
+
+Client *Utils::findByNick(const std::string& nick, std::map<int, Client> clients)
+{
+	for (std::map<int, Client>::iterator it = clients.begin();
+		it != clients.end();
+		++it)
+	{
+		if (toUpper(it->second.nick) == toUpper(nick))
+			return &it->second;
+	}
+	return NULL;
+}
+
