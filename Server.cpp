@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 17:29:06 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 20:19:42 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -248,12 +248,22 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return; 
 	}
-	if (p.cmd == "USERHOST") {
-		cmd.userHost();
-		cmd.tryRegister();
+	if (!c.registered) {
+		std::string msg = ":ircserv 451 " + clients[fd].nick + " :You have not registered.";
+		std::cout << msg << std::endl;
+		Utils::sendLine(fd, msg, clients);
+		return;
 	}
 	if (p.cmd == "PING") {
 		Utils::sendLine(fd, "PONG " + (p.hasTrailing ? p.trailing : ""), clients);
+		return;
+	}
+	if (p.cmd == "JOIN") {
+		cmd.join();
+		return;
+	}
+	if (p.cmd == "PRIVMSG") {
+		cmd.privmsg();
 		return;
 	}
 }

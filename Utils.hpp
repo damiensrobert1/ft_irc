@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:42:49 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 16:50:17 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 20:34:56 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,5 +24,5 @@ class Utils
 		static void sendLine(int fd, const std::string &line, std::map<int, Client> &clients);
 		static void queueSend(int fd, const std::string &data, std::map<int, Client> &clients);
 		static Client *findByNick(const std::string& nick, std::map<int, Client> &clients);
-
+		static void sendFromClient(int to_fd, const Client& from, const std::string& cmd, const std::string& params, std::map<int, Client> &clients);
 };

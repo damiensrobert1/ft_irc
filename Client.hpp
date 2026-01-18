@@ -6,13 +6,14 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 16:57:17 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 13:58:27 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 18:39:18 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 #include <string>
+#include <set>
 
 class Client
 {
@@ -27,6 +28,7 @@ class Client
 		std::string user;
 		std::string realname;
 
+		std::set<std::string> invited;
 
 		bool registered;
 		bool authed;

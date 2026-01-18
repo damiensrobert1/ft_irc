@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 15:34:28 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 20:19:59 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,12 +33,15 @@ class Cmd
 		void sendNumeric(int fd, const std::string& cmdOrNum, const std::string& msg);
 		void markForClose(int fd);
 		bool nickInUse(const std::string& nick, int except_fd) const;
-
+		Channel &getOrCreateChannel(const std::string &name);
+		void broadcastToChannel(const Channel& ch, int except_fd, const std::string& line);
+		void sendNamesList(Client& c, Channel& ch);
 	public:
 		Cmd(int fd, const Parsed &p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels);
 		void tryRegister();
 		void pass();
 		void nick();
 		void user();
-		void userHost();
+		void join();
+		void privmsg();
 };

@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 15:34:11 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 20:34:15 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,30 +140,150 @@ void Cmd::user()
 	client.realname = parsed.trailing;
 }
 
-void Cmd::userHost() {
+Channel &Cmd::getOrCreateChannel(const std::string& name)
+{
+	std::map<std::string, Channel>::iterator it = channels.find(name);
+	if (it != channels.end())
+		return it->second;
+	Channel ch;
+	ch.name = name;
+	channels[name] = ch;
+	return channels[name];
+}
+
+void Cmd::broadcastToChannel(const Channel& ch, int except_fd, const std::string& line) {
+	for (std::set<int>::iterator it = ch.members.begin();
+			it != ch.members.end();
+			++it)
+	{
+		int mfd = *it;
+		if (mfd == except_fd)
+			continue;
+		Utils::sendLine(mfd, line, clients);
+	}
+}
+
+void Cmd::sendNamesList(Client& c, Channel& ch)
+{
+	std::string names;
+	for (std::set<int>::iterator it = ch.members.begin();
+			it != ch.members.end();
+			++it)
+	{
+		int mfd = *it;
+		std::map<int, Client>::iterator iter = clients.find(mfd);
+		if (iter == clients.end())
+			continue;
+		if (!names.empty())
+			names += " ";
+		if (ch.isOp(mfd))
+			names += "@";
+		names += iter->second.nick.empty() ? "*" : iter->second.nick;
+	}
+	sendNumeric(c.fd, "353", "= " + ch.name + " :" + names);
+	sendNumeric(c.fd, "366", ch.name + " :End of /NAMES list.");
+}
+
+void Cmd::join()
+{
 	Client &client = clients[fd];
 	if (parsed.args.empty())
-	{
-		sendNumeric(client.fd, "461", "USERHOST :Not enough parameters");
+	if (parsed.args.empty() && !parsed.hasTrailing) {
+		sendNumeric(client.fd, "461", "JOIN :Not enough parameters");
+		return;
+	}
+	std::string chanName = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+	if (chanName.empty() || chanName[0] != '#') {
+		sendNumeric(client.fd, "479", chanName + " :Illegal channel name");
 		return;
 	}
 	
-	std::string reply;
-	size_t limit = std::min<size_t>(5, parsed.args.size());
+	std::string providedKey;
+	if (parsed.args.size() >= 2)
+		providedKey = parsed.args[1];
 	
-	for (size_t i = 0; i < limit; ++i) {
-		Client* t = Utils::findByNick(parsed.args[i], clients);
-		if (!t)
-			continue;
-		
-		std::string item = t->nick + "=+" + (t->user.empty() ? "unknown" : t->user) + "@" + (t->ip.empty() ? "0.0.0.0" : t->ip);
-		
-		if (!reply.empty())
-			reply += " ";
-		reply += item;
+	Channel& ch = getOrCreateChannel(chanName);
+	
+	if (ch.hasLimit && (int)ch.members.size() >= ch.userLimit && !ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "471", ch.name + " :Cannot join channel (+l)");
+		return;
 	}
 	
-	sendNumeric(client.fd, "302", ":" + reply);
+	if (ch.inviteOnly && !ch.isMember(client.fd)) {
+		if (!ch.invited.count(client.fd) && !client.invited.count(ch.name)) {
+			sendNumeric(client.fd, "473", ch.name + " :Cannot join channel (+i)");
+			return;
+		}
+	}
+	
+	if (ch.hasKey && !ch.isMember(client.fd)) {
+		if (providedKey != ch.key) {
+			sendNumeric(client.fd, "475", ch.name + " :Cannot join channel (+k)");
+			return;
+		}
+	}
+	
+	if (ch.isMember(client.fd))
+		return;
+	
+	bool firstUser = ch.members.empty();
+	ch.members.insert(client.fd);
+	
+	if (firstUser)
+		ch.operators.insert(client.fd);
+	
+	ch.invited.erase(client.fd);
+	client.invited.erase(ch.name);
+	
+	std::string joinLine = ":" + client.prefix() + " JOIN :" + ch.name;
+	Utils::sendLine(client.fd, joinLine, clients);
+	broadcastToChannel(ch, client.fd, joinLine);
+	
+	if (!ch.topic.empty())
+		sendNumeric(client.fd, "332", ch.name + " :" + ch.topic);
+	else
+		sendNumeric(client.fd, "331", ch.name + " :No topic is set");
+	
+	sendNamesList(client, ch);
+}
+
+void Cmd::privmsg()
+{
+	Client &client = clients[fd];
+	if (parsed.args.empty()) {
+		sendNumeric(client.fd, "411", ":No recipient given (PRIVMSG)");
+		return;
+	}
+	if (!parsed.hasTrailing) {
+		sendNumeric(client.fd, "412", ":No text to send");
+		return;
+	}
+	
+	std::string target = parsed.args[0];
+	std::string text = parsed.trailing;
+	
+	if (!target.empty() && target[0] == '#') {
+		std::map<std::string, Channel>::iterator it = channels.find(target);
+		if (it == channels.end()) {
+			sendNumeric(client.fd, "403", target + " :No such channel");
+			return;
+		}
+		Channel& ch = it->second;
+		if (!ch.isMember(client.fd)) {
+			sendNumeric(client.fd, "442", target + " :You're not on that channel");
+			return;
+		}
+		
+		std::string line = ":" + client.prefix() + " PRIVMSG " + target + " :" + text;
+		broadcastToChannel(ch, client.fd, line);
+	} else {
+		Client* dst = Utils::findByNick(target, clients);
+		if (!dst) {
+			sendNumeric(client.fd, "401", target + " :No such nick");
+			return;
+		}
+		Utils::sendFromClient(dst->fd, client, "PRIVMSG", dst->nick + " :" + text, clients);
+	}
 }
 
 void Cmd::tryRegister()

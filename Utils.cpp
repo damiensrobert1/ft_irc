@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:44:29 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 16:49:48 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 20:33:29 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,3 +54,6 @@ Client *Utils::findByNick(const std::string& nick, std::map<int, Client> &client
 	return NULL;
 }
 
+void Utils::sendFromClient(int to_fd, const Client& from, const std::string& cmd, const std::string& params, std::map<int, Client> &clients) {
+	Utils::sendLine(to_fd, ":" + from.prefix() + " " + cmd + " " + params, clients);
+}
