@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:47:04 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 13:59:34 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 16:23:19 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,6 @@ class Server
 		void sendLine(int fd, const std::string& line);
 		void queueSend(int fd, const std::string& data);
 		void shutdownAll();
-		void sendNumeric(int fd, const std::string& cmdOrNum, const std::string& msg);
 		void cmdPASS(Client& c, const Parsed& p);
 	public:
 

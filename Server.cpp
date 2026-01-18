@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 14:57:17 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 17:25:10 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -218,31 +218,40 @@ void Server::handleCommand(int fd, const std::string& line)
 		markForClose(fd);
 		return;
 	}
+	Cmd cmd(c.fd, p, clients, password, to_close, channels);
 	if (p.cmd == "PASS")
 	{
-		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.pass();
 		cmd.tryRegister();
 		return;
 	}
+	if (! c.authed)
+	{
+		if (p.cmd == "NICK") {
+			cmd.nick();
+			return;
+		}
+		if (p.cmd == "USER") {
+			cmd.user();
+			return; 
+		}
+		Utils::sendLine(c.fd, "Password required (PASS).", clients);
+		return;
+	}
 	if (p.cmd == "NICK") {
-		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.nick();
 		cmd.tryRegister();
 		return;
 	}
 	if (p.cmd == "USER") {
-		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.user();
 		cmd.tryRegister();
 		return; 
 	}
-	if (p.cmd == "PING") {
-		std::string line = ":ircserv PONG ircserv :" + (p.hasTrailing ? p.trailing : "");
-		Utils::sendLine(fd, line, clients);
-		return;
+	if (p.cmd == "USERHOST") {
+		cmd.userHost();
+		cmd.tryRegister();
 	}
-	
 }
 
 void Server::processInputLines()
