@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 15:01:51 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 15:07:11 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,7 +123,6 @@ void Cmd::nick()
 			}
 		}
 	}
-	std::cout << "client nick : " << client.nick << std::endl;
 }
 
 void Cmd::user()
@@ -139,8 +138,6 @@ void Cmd::user()
 	}
 	client.user = parsed.args[0];
 	client.realname = parsed.trailing;
-	std::cout << "user :" << client.user << "\n";
-	std::cout << "realname :" << client.realname << "\n";
 }
 
 void Cmd::tryRegister()
