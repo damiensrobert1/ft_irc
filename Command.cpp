@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 18:53:32 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 15:01:51 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,8 @@
 #include "Channel.hpp"
 #include "Utils.hpp"
 
-Cmd::Cmd(Client& c, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels)
-	:client(c), parsed(p), clients(clients), password(password), to_close(to_close), channels(channels)
+Cmd::Cmd(int fd, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels)
+	:fd(fd), parsed(p), clients(clients), password(password), to_close(to_close), channels(channels)
 {
 }
 
@@ -39,6 +39,7 @@ void Cmd::markForClose(int fd)
 
 void Cmd::pass()
 {
+	Client &client = clients[fd];
 	if (parsed.args.empty() && !parsed.hasTrailing) {
 		sendNumeric(client.fd, "461", "PASS :Not enough parameters");
 		return;
@@ -78,6 +79,7 @@ bool Cmd::nickInUse(const std::string& nick, int except_fd) const
 
 void Cmd::nick()
 {
+	Client &client = clients[fd];
 	if (parsed.args.empty() && !parsed.hasTrailing)
 	{
 		sendNumeric(client.fd, "431", ":No nickname given");
@@ -126,6 +128,7 @@ void Cmd::nick()
 
 void Cmd::user()
 {
+	Client &client = clients[fd];
 	if (parsed.args.size() < 3 || (!parsed.hasTrailing)) {
 		sendNumeric(client.fd, "461", "USER :Not enough parameters");
 		return;
@@ -142,6 +145,7 @@ void Cmd::user()
 
 void Cmd::tryRegister()
 {
+	Client &client = clients[fd];
 	if (client.registered)
 		return;
 	if (!client.authed)

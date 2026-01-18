@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 18:30:08 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 14:57:17 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -213,7 +213,6 @@ void Server::handleCommand(int fd, const std::string& line)
 	p.parse();
 	if (p.cmd.empty())
 		return;
-	
 	if (p.cmd == "QUIT")
 	{
 		markForClose(fd);
@@ -221,19 +220,19 @@ void Server::handleCommand(int fd, const std::string& line)
 	}
 	if (p.cmd == "PASS")
 	{
-		Cmd cmd(c, p, clients, password, to_close, channels);
+		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.pass();
 		cmd.tryRegister();
 		return;
 	}
 	if (p.cmd == "NICK") {
-		Cmd cmd(c, p, clients, password, to_close, channels);
+		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.nick();
 		cmd.tryRegister();
 		return;
 	}
 	if (p.cmd == "USER") {
-		Cmd cmd(c, p, clients, password, to_close, channels);
+		Cmd cmd(c.fd, p, clients, password, to_close, channels);
 		cmd.user();
 		cmd.tryRegister();
 		return; 

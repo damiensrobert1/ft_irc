@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 18:30:43 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 15:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@
 class Cmd
 {
 	private:
-		Client client;
+		int fd;
 		Parsed parsed;
 		std::map<int, Client> &clients;
 		std::string password;
@@ -35,7 +35,7 @@ class Cmd
 		bool nickInUse(const std::string& nick, int except_fd) const;
 
 	public:
-		Cmd(Client &c, const Parsed &p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels);
+		Cmd(int fd, const Parsed &p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels);
 		void tryRegister();
 		void pass();
 		void nick();
