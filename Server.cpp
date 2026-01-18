@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 20:19:42 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/18 21:13:28 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -225,19 +225,6 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return;
 	}
-	if (! c.authed)
-	{
-		if (p.cmd == "NICK") {
-			cmd.nick();
-			return;
-		}
-		if (p.cmd == "USER") {
-			cmd.user();
-			return; 
-		}
-		Utils::sendLine(c.fd, "Password required (PASS).", clients);
-		return;
-	}
 	if (p.cmd == "NICK") {
 		cmd.nick();
 		cmd.tryRegister();
@@ -247,12 +234,6 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.user();
 		cmd.tryRegister();
 		return; 
-	}
-	if (!c.registered) {
-		std::string msg = ":ircserv 451 " + clients[fd].nick + " :You have not registered.";
-		std::cout << msg << std::endl;
-		Utils::sendLine(fd, msg, clients);
-		return;
 	}
 	if (p.cmd == "PING") {
 		Utils::sendLine(fd, "PONG " + (p.hasTrailing ? p.trailing : ""), clients);
