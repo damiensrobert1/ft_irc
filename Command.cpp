@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 02:28:38 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 03:35:39 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -287,6 +287,50 @@ void Cmd::privmsg()
 		}
 		Utils::sendFromClient(dst->fd, client, "PRIVMSG", dst->nick + " :" + text, clients);
 	}
+}
+
+void Cmd::kick()
+{
+	Client &client = clients[fd];
+	if (parsed.args.size() < 2) {
+		sendNumeric(client.fd, "461", "KICK :Not enough parameters");
+		return;
+	}
+	std::string chanName = parsed.args[0];
+	std::string nick = parsed.args[1];
+	std::string reason = parsed.hasTrailing ? parsed.trailing : "Kicked";
+	
+	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+	if (it == channels.end()) {
+		sendNumeric(client.fd, "403", chanName + " :No such channel");
+		return;
+	}
+	Channel& ch = it->second;
+	if (!ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
+		return;
+	}
+	if (!ch.isOp(client.fd)) {
+		sendNumeric(client.fd, "482", chanName + " :You're not channel operator");
+		return;
+	}
+	
+	Client* victim = Utils::findByNick(nick, clients);
+	if (!victim || !ch.isMember(victim->fd)) {
+		sendNumeric(client.fd, "441", nick + " " + chanName + " :They aren't on that channel");
+		return;
+	}
+	
+	std::string kickLine = ":" + client.prefix() + " KICK " + chanName + " " + victim->nick + " :" + reason;
+	Utils::sendLine(victim->fd, kickLine, clients);
+	broadcastToChannel(ch, victim->fd, kickLine);
+	
+	ch.members.erase(victim->fd);
+	ch.operators.erase(victim->fd);
+	ch.invited.erase(victim->fd);
+	
+	if (ch.members.empty())
+		channels.erase(chanName);
 }
 
 void Cmd::tryRegister()

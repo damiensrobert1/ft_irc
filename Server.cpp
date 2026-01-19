@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 03:12:19 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 03:28:57 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -257,6 +257,11 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.privmsg();
 		return;
 	}
+	if (p.cmd == "KICK") { 
+		cmd.kick();
+		return;
+	}
+	Utils::sendLine(fd, "421 " + p.cmd + " :Unknown command", clients);
 }
 
 void Server::processInputLines()
