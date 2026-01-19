@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:39:13 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 11:16:53 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@ class Cmd
 		void pass();
 		void nick();
 		void user();
+		void userhost();
 		void join();
 		void privmsg();
 		void kick();

@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 05:03:13 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 11:19:24 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,6 +143,32 @@ void Cmd::user()
 	}
 	client.user = parsed.args[0];
 	client.realname = parsed.trailing;
+}
+
+void Cmd::userhost()
+{
+	Client &client = clients[fd];
+	if (parsed.args.empty()) {
+		sendNumeric(client.fd, "461", "USERHOST :Not enough parameters");
+		return;
+	}
+
+	std::string reply;
+	size_t limit = std::min<size_t>(5, parsed.args.size());
+	
+	for (size_t i = 0; i < limit; ++i) {
+	  Client* t = Utils::findByNick(parsed.args[i], clients);
+	  if (!t)
+		continue;
+	
+	  std::string item = t->nick + "=+" + (t->user.empty() ? "unknown" : t->user) + "@" + (t->ip.empty() ? "0.0.0.0" : t->ip);
+	
+	  if (!reply.empty())
+		reply += " ";
+	  reply += item;
+	}
+	
+	sendNumeric(client.fd, "302", ":" + reply);
 }
 
 Channel &Cmd::getOrCreateChannel(const std::string& name)

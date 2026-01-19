@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:38:57 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 11:32:12 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,7 +208,6 @@ void Server::handleCommand(int fd, const std::string& line)
 	if (it == clients.end())
 		return;
 	Client& c = it->second;
-	
 	Parsed p(line);
 	p.parse();
 	if (p.cmd.empty())
@@ -239,6 +238,10 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return; 
 	}
+	if (p.cmd == "USERHOST") {
+		cmd.userhost();
+		cmd.tryRegister();
+		return; }
 	if (! c.registered) {
 		Utils::sendLine(fd, "451 :You have not registered.", clients);
 		return;
