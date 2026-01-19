@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:42:49 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 02:24:02 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 05:00:12 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,4 +26,5 @@ class Utils
 		static Client *findByNick(const std::string& nick, std::map<int, Client> &clients);
 		static void sendFromClient(int to_fd, const Client& from, const std::string& cmd, const std::string& params, std::map<int, Client> &clients);
 		static bool iequals(const std::string& a, const std::string& b);
+		static std::string toString(int n);
 };

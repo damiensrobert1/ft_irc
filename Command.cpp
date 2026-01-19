@@ -6,12 +6,14 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:31:47 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 05:03:13 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <map>
 #include <string>
+#include <cstdlib>
+#include <algorithm>
 
 #include "Command.hpp"
 #include "Server.hpp"
@@ -411,6 +413,145 @@ void Cmd::topic()
 	
 	ch.topic = parsed.trailing;
 	std::string line = ":" + client.prefix() + " TOPIC " + chanName + " :" + ch.topic;
+	Utils::sendLine(client.fd, line, clients);
+	broadcastToChannel(ch, client.fd, line);
+}
+
+void Cmd::mode()
+{
+	Client &client = clients[fd];
+	if (parsed.args.empty()) {
+		sendNumeric(client.fd, "461", "MODE :Not enough parameters");
+		return;
+	}
+	std::string target = parsed.args[0];
+	
+	if (target.empty() || target[0] != '#') {
+		sendNumeric(client.fd, "472", ":Only channel MODE is supported here");
+		return;
+	}
+	
+	std::map<std::string, Channel>::iterator it = channels.find(target);
+	if (it == channels.end()) {
+		sendNumeric(client.fd, "403", target + " :No such channel");
+		return;
+	}
+	Channel& ch = it->second;
+	
+	if (parsed.args.size() == 1) {
+		std::string modes = "+";
+		if (ch.inviteOnly)
+			modes += "i";
+		if (ch.topicOpOnly)
+			modes += "t";
+		if (ch.hasKey)
+			modes += "k";
+		if (ch.hasLimit)
+			modes += "l";
+		
+		std::string params;
+		if (ch.hasKey) params += " " + ch.key;
+		if (ch.hasLimit) params += " " + Utils::toString(ch.userLimit);
+		
+		sendNumeric(client.fd, "324", ch.name + " " + modes + params);
+		return;
+	}
+	
+	if (!ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "442", ch.name + " :You're not on that channel");
+		return;
+	}
+	if (!ch.isOp(client.fd)) {
+		sendNumeric(client.fd, "482", ch.name + " :You're not channel operator");
+		return;
+	}
+	
+	std::string modeStr = parsed.args[1];
+	bool adding = true;
+	size_t argi = 2;
+	
+	std::string applied = "";
+	std::vector<std::string> appliedParams;
+	
+	for (size_t i = 0; i < modeStr.size(); ++i) {
+		char m = modeStr[i];
+		if (m == '+') {
+			adding = true;
+			continue;
+		}
+		if (m == '-') {
+			adding = false;
+			continue;
+		}
+		
+		if (m == 'i') {
+			ch.inviteOnly = adding;
+			applied += (adding ? "+i" : "-i");
+		} else if (m == 't') {
+			ch.topicOpOnly = adding;
+			applied += (adding ? "+t" : "-t");
+		} else if (m == 'k') {
+			if (adding) {
+				if (argi >= parsed.args.size()) {
+					sendNumeric(client.fd, "461", "MODE :Not enough parameters");
+					return;
+				}
+				ch.hasKey = true;
+				ch.key = parsed.args[argi++];
+				applied += "+k";
+				appliedParams.push_back(ch.key);
+			} else {
+				ch.hasKey = false;
+				ch.key.clear();
+				applied += "-k";
+			}
+		} else if (m == 'l') {
+			if (adding) {
+				if (argi >= parsed.args.size()) {
+					sendNumeric(client.fd, "461", "MODE :Not enough parameters");
+					return;
+				}
+				ch.hasLimit = true;
+				ch.userLimit = std::max(0, ::atoi(parsed.args[argi++].c_str()));
+				applied += "+l";
+				appliedParams.push_back(Utils::toString(ch.userLimit));
+			} else {
+				ch.hasLimit = false;
+				ch.userLimit = 0;
+				applied += "-l";
+			}
+		} else if (m == 'o') {
+			if (argi >= parsed.args.size()) {
+				sendNumeric(client.fd, "461", "MODE :Not enough parameters");
+				return;
+			}
+			std::string nick = parsed.args[argi++];
+			Client* dst = Utils::findByNick(nick, clients);
+			if (!dst || !ch.isMember(dst->fd)) {
+				sendNumeric(client.fd, "441", nick + " " + ch.name + " :They aren't on that channel");
+				return;
+			}
+			if (adding)
+				ch.operators.insert(dst->fd);
+			else
+				ch.operators.erase(dst->fd);
+			
+			applied += (adding ? "+o" : "-o");
+			appliedParams.push_back(dst->nick);
+		} else {
+			sendNumeric(client.fd, "472", std::string(1, m) + " :is unknown mode char to me");
+			return;
+		}
+	}
+	
+	if (applied.empty())
+		return;
+	
+	std::string params = ch.name + " " + applied;
+	for (size_t i = 0; i < appliedParams.size(); ++i)
+		params += " " + appliedParams[i];
+	
+	std::string line = ":" + client.prefix() + " MODE " + params;
 	Utils::sendLine(client.fd, line, clients);
 	broadcastToChannel(ch, client.fd, line);
 }

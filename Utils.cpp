@@ -6,12 +6,13 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:44:29 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 02:23:39 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 05:01:12 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <string>
 #include <cctype>
+#include <sstream>
 
 #include "Utils.hpp"
 
@@ -73,3 +74,9 @@ bool Utils::iequals(const std::string& a, const std::string& b)
 	return true;
 }
 
+std::string Utils::toString(int n)
+{
+	std::ostringstream oss;
+	oss << n;
+	return oss.str();
+}

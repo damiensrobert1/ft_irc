@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:32:36 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 04:38:57 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -270,7 +270,7 @@ void Server::handleCommand(int fd, const std::string& line)
 		return;
 	}
 	if (p.cmd == "MODE") {
-		//cmd.mode();
+		cmd.mode();
 		return;
 	}
 	Utils::sendLine(fd, "421 " + p.cmd + " :Unknown command", clients);
