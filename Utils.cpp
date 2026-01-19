@@ -6,11 +6,12 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:44:29 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 22:25:22 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 02:23:39 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <string>
+#include <cctype>
 
 #include "Utils.hpp"
 
@@ -57,3 +58,18 @@ Client *Utils::findByNick(const std::string& nick, std::map<int, Client> &client
 void Utils::sendFromClient(int to_fd, const Client& from, const std::string& cmd, const std::string& params, std::map<int, Client> &clients) {
 	Utils::sendLine(to_fd, ":" + from.prefix() + " " + cmd + " " + params, clients);
 }
+
+bool Utils::iequals(const std::string& a, const std::string& b)
+{
+	if (a.size() != b.size())
+		return false;
+	
+	for (size_t i = 0; i < a.size(); ++i)
+	{
+		if (std::tolower((unsigned char)a[i]) !=
+			std::tolower((unsigned char)b[i]))
+			return false;
+	}
+	return true;
+}
+

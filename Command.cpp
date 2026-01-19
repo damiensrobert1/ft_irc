@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 22:18:11 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 02:28:38 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,50 +78,55 @@ bool Cmd::nickInUse(const std::string& nick, int except_fd) const
 void Cmd::nick()
 {
 	Client &client = clients[fd];
-	if (parsed.args.empty() && !parsed.hasTrailing)
-	{
+	
+	if (parsed.args.empty() && !parsed.hasTrailing) {
 		sendNumeric(client.fd, "431", ":No nickname given");
 		return;
 	}
+	
 	std::string newNick = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
-	if (newNick.empty())
-	{
+	if (newNick.empty()) {
 		sendNumeric(client.fd, "432", ":Erroneous nickname");
 		return;
 	}
-
 	if (newNick.size() > 30)
 		newNick.resize(30);
 	
-	if (nickInUse(newNick, client.fd))
-	{
+	if (nickInUse(newNick, client.fd)) {
 		sendNumeric(client.fd, "433", newNick + " :Nickname is already in use");
 		return;
 	}
 	
 	std::string oldNick = client.nick;
+	
+	if (!oldNick.empty() && Utils::iequals(oldNick, newNick))
+		return;
+	
 	client.nick = newNick;
 	
-	if (!oldNick.empty()) {
-		for (std::map<std::string, Channel>::iterator it = channels.begin();
-     				it != channels.end();
-     				++it)
-		{
-			Channel& ch = it->second;
-			if (ch.isMember(client.fd)) {
-				for (std::set<int>::iterator it = ch.members.begin();
-					it != ch.members.end();
-					++it)
-				{
-					int mfd = *it;
-					if (mfd == client.fd)
-						continue;
-					Utils::sendLine(mfd, ":" + oldNick + "!" + client.user + "@" + client.ip + " NICK :" + client.nick, clients);
-				}
-			}
+	if (oldNick.empty())
+		return;
+	
+	std::string line = ":" + oldNick + "!" + client.user + "@" + client.ip + " NICK :" + client.nick;
+	
+	std::set<int> targets;
+	targets.insert(client.fd);
+	
+	for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it) {
+		Channel &ch = it->second;
+		if (!ch.isMember(client.fd))
+			continue;
+		
+		for (std::set<int>::iterator mit = ch.members.begin(); mit != ch.members.end(); ++mit) {
+			targets.insert(*mit);
 		}
 	}
+	
+	for (std::set<int>::iterator tit = targets.begin(); tit != targets.end(); ++tit) {
+		Utils::sendLine(*tit, line, clients);
+	}
 }
+
 
 void Cmd::user()
 {
