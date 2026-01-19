@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 13:55:49 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 14:09:04 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -317,6 +317,13 @@ void Cmd::part()
 	if (ch.members.empty()) {
 	    channels.erase(chanName);
 	}
+}
+
+void Cmd::who()
+{
+	Client &client = clients[fd];
+	std::string mask = parsed.args.empty() ? "*" : parsed.args[0];
+	sendNumeric(client.fd, "315", mask + " :End of /WHO list.");
 }
 
 void Cmd::privmsg()
