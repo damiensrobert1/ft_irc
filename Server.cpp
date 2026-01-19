@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 01:10:25 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 03:12:19 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -244,7 +244,9 @@ void Server::handleCommand(int fd, const std::string& line)
 		return;
 	}
 	if (p.cmd == "PING") {
-		Utils::sendLine(fd, "PONG :" + (p.hasTrailing ? p.trailing : ""), clients);
+		Utils::sendLine(fd,
+			"PONG" + (p.hasTrailing ? p.trailing : ""),
+			clients);
 		return;
 	}
 	if (p.cmd == "JOIN") {
