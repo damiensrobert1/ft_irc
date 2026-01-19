@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 11:32:12 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 13:52:16 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -254,6 +254,10 @@ void Server::handleCommand(int fd, const std::string& line)
 	}
 	if (p.cmd == "JOIN") {
 		cmd.join();
+		return;
+	}
+	if (p.cmd == "PART") {
+		cmd.part();
 		return;
 	}
 	if (p.cmd == "PRIVMSG") {

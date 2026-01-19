@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 11:19:24 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 13:55:49 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -276,6 +276,47 @@ void Cmd::join()
 		sendNumeric(client.fd, "331", ch.name + " :No topic is set");
 	
 	sendNamesList(client, ch);
+}
+
+void Cmd::part()
+{
+	Client &client = clients[fd];
+	if (parsed.args.empty()) {
+		sendNumeric(client.fd, "461", "PART :Not enough parameters");
+		return;
+	}
+	
+	std::string chanName = parsed.args[0];
+	std::string reason = parsed.hasTrailing ? parsed.trailing : "Leaving";
+	
+	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+	if (it == channels.end()) {
+		sendNumeric(client.fd, "403", chanName + " :No such channel");
+		return;
+	}
+	
+	Channel& ch = it->second;
+	
+	if (!ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
+		return;
+	}
+	
+	std::string line = ":" + client.prefix() + " PART " + chanName + " :" + reason;
+	
+	for (std::set<int>::iterator mit = ch.members.begin();
+	     mit != ch.members.end(); ++mit)
+	{
+	    Utils::sendLine(*mit, line, clients);
+	}
+	
+	ch.members.erase(client.fd);
+	ch.operators.erase(client.fd);
+	ch.invited.erase(client.fd);
+	
+	if (ch.members.empty()) {
+	    channels.erase(chanName);
+	}
 }
 
 void Cmd::privmsg()
