@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 03:35:39 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 04:19:32 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -331,6 +331,49 @@ void Cmd::kick()
 	
 	if (ch.members.empty())
 		channels.erase(chanName);
+}
+
+void Cmd::invite()
+{
+	Client &client = clients[fd];
+	if (parsed.args.size() < 2) {
+		sendNumeric(client.fd, "461", "INVITE :Not enough parameters");
+		return;
+	}
+	std::string nick = parsed.args[0];
+	std::string chanName = parsed.args[1];
+	
+	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+	if (it == channels.end()) {
+		sendNumeric(client.fd, "403", chanName + " :No such channel");
+		return;
+	}
+	Channel& ch = it->second;
+	
+	if (!ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
+		return;
+	}
+	if (!ch.isOp(client.fd)) {
+		sendNumeric(client.fd, "482", chanName + " :You're not channel operator");
+		return;
+	}
+	
+	Client* dst = Utils::findByNick(nick, clients);
+	if (!dst) {
+		sendNumeric(client.fd, "401", nick + " :No such nick");
+		return;
+	}
+	if (ch.isMember(dst->fd)) {
+		sendNumeric(client.fd, "443", nick + " " + chanName + " :is already on channel");
+		return;
+	}
+	
+	ch.invited.insert(dst->fd);
+	dst->invited.insert(chanName);
+	
+	sendNumeric(client.fd, "341", nick + " " + chanName);
+	Utils::sendFromClient(dst->fd, client, "INVITE", dst->nick + " :" + chanName, clients);
 }
 
 void Cmd::tryRegister()
