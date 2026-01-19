@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:19:32 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 04:31:47 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -374,6 +374,45 @@ void Cmd::invite()
 	
 	sendNumeric(client.fd, "341", nick + " " + chanName);
 	Utils::sendFromClient(dst->fd, client, "INVITE", dst->nick + " :" + chanName, clients);
+}
+
+void Cmd::topic()
+{
+	Client &client = clients[fd];
+	if (parsed.args.empty()) {
+		sendNumeric(client.fd, "461", "TOPIC :Not enough parameters");
+		return;
+	}
+	std::string chanName = parsed.args[0];
+	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+	if (it == channels.end()) {
+		sendNumeric(client.fd, "403", chanName + " :No such channel");
+		return;
+	}
+	Channel& ch = it->second;
+	
+	if (!ch.isMember(client.fd)) {
+		sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
+		return;
+	}
+	
+	if (!parsed.hasTrailing) {
+		if (ch.topic.empty())
+			sendNumeric(client.fd, "331", chanName + " :No topic is set");
+		else
+			sendNumeric(client.fd, "332", chanName + " :" + ch.topic);
+		return;
+	}
+	
+	if (ch.topicOpOnly && !ch.isOp(client.fd)) {
+		sendNumeric(client.fd, "482", chanName + " :You're not channel operator");
+		return;
+	}
+	
+	ch.topic = parsed.trailing;
+	std::string line = ":" + client.prefix() + " TOPIC " + chanName + " :" + ch.topic;
+	Utils::sendLine(client.fd, line, clients);
+	broadcastToChannel(ch, client.fd, line);
 }
 
 void Cmd::tryRegister()

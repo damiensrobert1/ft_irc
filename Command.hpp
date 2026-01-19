@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:35:21 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 04:13:42 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/19 04:32:15 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,4 +46,5 @@ class Cmd
 		void privmsg();
 		void kick();
 		void invite();
+		void topic();
 };
