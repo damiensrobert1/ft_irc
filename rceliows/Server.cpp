@@ -117,7 +117,7 @@ void Server::buildPollFds()
 		pollfd pc;
 		pc.fd = fd;
 		pc.events = POLLIN;
-		if (!c.outbuf.empty())
+		if (!c.getOutbuf().empty())
 			pc.events |= POLLOUT;
 		pc.revents = 0;
 		pfds.push_back(pc);
@@ -181,8 +181,8 @@ void Server::handleRead(int fd)
 		ssize_t n = ::recv(fd, buf, sizeof(buf), 0);
 		if (n > 0)
 		{
-			it->second.inbuf.append(buf, (size_t)n);
-			if (it->second.inbuf.size() > 64 * 1024)
+			it->second.getInbuf().append(buf, (size_t)n);
+			if (it->second.getInbuf().size() > 64 * 1024)
 			{
 				markForClose(fd);
 				return;
@@ -217,10 +217,11 @@ void Server::handleCommand(int fd, const std::string& line)
 		markForClose(fd);
 		return;
 	}
-	if (p.cmd == "CAP" {)
+	if (p.cmd == "CAP")
+	{
 		return;
 	}
-	Cmd cmd(c.fd, p, clients, password, to_close, channels);
+	Cmd cmd(c.getFd(), p, clients, password, to_close, channels);
 	if (p.cmd == "PASS")
 	{
 		cmd.pass();
@@ -237,7 +238,7 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return; 
 	}
-	if (! c.registered) {
+	if (c.isRegistered()) {
 		Utils::sendLine(fd, "451 :You have not registered.", clients);
 		return;
 	}
@@ -300,12 +301,12 @@ void Server::processInputLines()
 		
 		while (true)
 		{
-			size_t pos = c.inbuf.find('\n');
+			size_t pos = c.getInbuf().find('\n');
 			if (pos == std::string::npos)
 				break;
 			
-			std::string line = c.inbuf.substr(0, pos + 1);
-			c.inbuf.erase(0, pos + 1);
+			std::string line = c.getInbuf().substr(0, pos + 1);
+			c.getInbuf().erase(0, pos + 1);
 			
 			line = Utils::trimCRLF(line);
 			if (line.empty())
@@ -325,11 +326,11 @@ void Server::handleWrite(int fd)
 		return;
 	Client& c = it->second;
 	
-	while (!c.outbuf.empty())
+	while (!c.getOutbuf().empty())
 	{
-		ssize_t n = ::send(fd, c.outbuf.data(), c.outbuf.size(), 0);
+		ssize_t n = ::send(fd, c.getOutbuf().data(), c.getOutbuf().size(), 0);
 		if (n > 0){
-			c.outbuf.erase(0, (size_t)n);
+			c.getOutbuf().erase(0, (size_t)n);
 		}
 		else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
 		{
@@ -381,7 +382,7 @@ void Server::partAllChannels(int fd)
 			continue;
 	
 		Client& c = clients[fd];
-		std::string partLine = ":" + c.prefix() + " PART " + ch.getName() + " :leaving";
+		std::string partLine = ":" + c.getPrefix() + " PART " + ch.getName() + " :leaving";
 		broadcastToChannel(ch, fd, partLine);
 	
 		ch.removeMember(fd);

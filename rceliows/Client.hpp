@@ -17,7 +17,7 @@
 
 class Client
 {
-	public:
+	private: 
 		int fd;
 		std::string ip;
 
@@ -33,8 +33,38 @@ class Client
 		bool registered;
 		bool authed;
 
+	public:
 		Client();
 		Client(int fd, std::string ip);
+		Client(const Client& other);
+		Client& operator=(const Client& other);
+		~Client();
 
-		std::string prefix() const;
+		// Getters
+		int getFd() const;
+		std::string getIp() const;
+		std::string getOutbuf() const;
+		std::string getInbuf() const;
+		std::string getNick() const;
+		std::string getUser() const;
+		std::string getRealname() const;
+//		std::set<std::string> getInvited() const;
+		std::string getPrefix() const;
+		bool isRegistered() const;
+		bool isAuthed() const;
+
+		// Setters
+		void setFd(const int fd);
+		void setIp(const std::string& ip);
+		void setOutbuf(const std::string& outbuf);
+		void setInbuf(const std::string& inbuf);
+		void setNick(const std::string& nick);
+		void settUser(const std::string& user);
+		void setRealname(const std::string& realname);
+//		void setInvited() const;
+		void addRegistered();
+		void removeRegistered();
+		void addAuthed();
+		void removeAuthed();
+	
 };

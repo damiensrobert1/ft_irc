@@ -36,7 +36,7 @@ void Utils::queueSend(int fd, const std::string &data, std::map<int, Client> &cl
         std::map<int, Client>::iterator it = clients.find(fd);
         if (it == clients.end())
                 return;
-        it->second.outbuf += data;
+        it->second.getOutbuf() += data;
 }
 
 void Utils::sendLine(int fd, const std::string &line, std::map<int, Client> &clients)
@@ -50,14 +50,14 @@ Client *Utils::findByNick(const std::string& nick, std::map<int, Client> &client
 		it != clients.end();
 		++it)
 	{
-		if (toUpper(it->second.nick) == toUpper(nick))
+		if (toUpper(it->second.getNick()) == toUpper(nick))
 			return &it->second;
 	}
 	return NULL;
 }
 
 void Utils::sendFromClient(int to_fd, const Client& from, const std::string& cmd, const std::string& params, std::map<int, Client> &clients) {
-	Utils::sendLine(to_fd, ":" + from.prefix() + " " + cmd + " " + params, clients);
+	Utils::sendLine(to_fd, ":" + from.getPrefix() + " " + cmd + " " + params, clients);
 }
 
 bool Utils::iequals(const std::string& a, const std::string& b)
