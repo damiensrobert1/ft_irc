@@ -120,7 +120,8 @@ void Cmd::nick()
 		if (!ch.isMember(client.fd))
 			continue;
 		
-		for (std::set<int>::iterator mit = ch.members.begin(); mit != ch.members.end(); ++mit) {
+		const std::set<int>& memberSet = ch.getMembers();
+		for (std::set<int>::const_iterator mit = memberSet.begin(); mit != memberSet.end(); ++mit) {
 			targets.insert(*mit);
 		}
 	}
@@ -218,109 +219,143 @@ void Cmd::sendNamesList(Client& c, Channel& ch)
 	sendNumeric(c.fd, "366", ch.getName() + " :End of /NAMES list.");
 }
 
+#include <sstream>
+
+std::vector<std::string>	splitArg(const std::string &s, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream iss(s);
+    while (std::getline(iss, token, delimiter))
+    {
+        if (!token.empty())
+            tokens.push_back(token);
+    }
+    return tokens;
+}
+
 void Cmd::join()
 {
 	Client &client = clients[fd];
-	if (parsed.args.empty())
 	if (parsed.args.empty() && !parsed.hasTrailing) {
 		sendNumeric(client.fd, "461", "JOIN :Not enough parameters");
 		return;
 	}
-	std::string chanName = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
-	if (chanName.empty() || chanName[0] != '#') {
-		sendNumeric(client.fd, "479", chanName + " :Illegal channel name");
+	std::string chanNameStr = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+	if (chanNameStr.empty() || chanNameStr[0] != '#') {
+		sendNumeric(client.fd, "479", chanNameStr + " :Illegal channel name");
 		return;
-	}
-	
-	std::string providedKey;
-	if (parsed.args.size() >= 2)
-		providedKey = parsed.args[1];
-	
-	Channel& ch = getOrCreateChannel(chanName);
-	
-	if (ch.getHasLimit() && ch.getMemberCount() >= ch.getUserLimit() && !ch.isMember(client.fd)) {
-		sendNumeric(client.fd, "471", ch.getName() + " :Cannot join channel (+l)");
-		return;
-	}
-	
-	if (ch.getInviteOnly() && !ch.isMember(client.fd))
-	{
-		if (!ch.isInvited(client.fd) && !client.invited.count(ch.getName()))
-		{
-			sendNumeric(client.fd, "473", ch.getName() + " :Cannot join channel (+i)");
-			return;
-		}
 	}
 
-	if (ch.getHasKey() && !ch.isMember(client.fd))
-	{
-		if (providedKey != ch.getKey())
-		{
-		sendNumeric(client.fd, "475", ch.getName() + " :Cannot join channel (+k)");
-		return;
+	std::vector<std::string> channelNames = splitArg(chanNameStr, ',');
+	
+	std::vector<std::string> providedKeys;
+	if (parsed.args.size() >= 2)
+		providedKeys = splitArg(parsed.args[1], ',');
+	
+	for (size_t i = 0; i < channelNames.size(); ++i)
+    {
+		std::string chanName = channelNames[i];
+		std::string providedKey = "";
+        if (i < providedKeys.size())
+            providedKey = providedKeys[i];
+
+		if (chanName.empty() || chanName[0] != '#') {
+			sendNumeric(client.fd, "479", chanName + " :Illegal channel name");
+			return;
 		}
+		Channel& ch = getOrCreateChannel(chanName);
+		
+		if (ch.getHasLimit() && ch.getMemberCount() >= static_cast<size_t>(ch.getUserLimit()) && !ch.isMember(client.fd)) {
+			sendNumeric(client.fd, "471", ch.getName() + " :Cannot join channel (+l)");
+			continue;
+		}
+		
+		if (ch.getInviteOnly() && !ch.isMember(client.fd))
+		{
+			if (!ch.isInvited(client.fd) && !client.invited.count(ch.getName()))
+			{
+				sendNumeric(client.fd, "473", ch.getName() + " :Cannot join channel (+i)");
+				continue;
+			}
+		}
+		
+		if (ch.getHasKey() && !ch.isMember(client.fd))
+		{
+			if (providedKey != ch.getKey())
+			{
+			sendNumeric(client.fd, "475", ch.getName() + " :Cannot join channel (+k)");
+			continue;
+			}
+		}
+		
+		if (ch.isMember(client.fd))
+			continue;
+		
+		bool firstUser = (ch.getMemberCount() == 0);
+		ch.addMember(client.fd);
+	
+		if (firstUser)
+			ch.addOperator(client.fd); 
+		
+		ch.removeInvited(client.fd);
+		client.invited.erase(ch.getName());
+		
+		std::string joinLine = ":" + client.prefix() + " JOIN :" + ch.getName();
+		Utils::sendLine(client.fd, joinLine, clients);
+		broadcastToChannel(ch, client.fd, joinLine);
+		
+		if (ch.getTopic().empty())
+			sendNumeric(client.fd, "331", ch.getName() + " :No topic is set");
+		else
+			sendNumeric(client.fd, "332", ch.getName() + " :" + ch.getTopic());
+		
+		sendNamesList(client, ch);
 	}
-	
-	if (ch.isMember(client.fd))
-		return;
-	
-	bool firstUser = (ch.getMemberCount() == 0);
-	ch.addMember(client.fd);
-	
-	if (firstUser)
-		ch.addOperator(client.fd); 
-	
-	ch.removeInvited(client.fd);
-	client.invited.erase(ch.name);
-	
-	std::string joinLine = ":" + client.prefix() + " JOIN :" + ch.getName();
-	Utils::sendLine(client.fd, joinLine, clients);
-	broadcastToChannel(ch, client.fd, joinLine);
-	
-	if (!ch.getTopic().empty())
-		sendNumeric(client.fd, "332", ch.getName() + " :" + ch.getTopic());
-	else
-		sendNumeric(client.fd, "331", ch.getName() + " :No topic is set");
-	
-	sendNamesList(client, ch);
 }
 
 void Cmd::part()
 {
 	Client &client = clients[fd];
-	if (parsed.args.empty()) {
+	if (parsed.args.empty())
+	{
 		sendNumeric(client.fd, "461", "PART :Not enough parameters");
 		return;
 	}
 	
-	std::string chanName = parsed.args[0];
+	std::vector<std::string> channelNames = splitArg(parsed.args[0], ',');
 	std::string reason = parsed.hasTrailing ? parsed.trailing : "Leaving";
 	
-	std::map<std::string, Channel>::iterator it = channels.find(chanName);
-	if (it == channels.end()) {
-		sendNumeric(client.fd, "403", chanName + " :No such channel");
-		return;
-	}
-	
-	Channel& ch = it->second;
-	
-	if (!ch.isMember(client.fd)) {
-		sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
-		return;
-	}
-	
-	std::string line = ":" + client.prefix() + " PART " + chanName + " :" + reason;
-	
-	for (std::set<int>::iterator mit = ch.members.begin();
-	     mit != ch.members.end(); ++mit)
-	{
-	    Utils::sendLine(*mit, line, clients);
-	}
-	
-	ch.removeMember(client.fd);
-	
-	if (ch.members.empty()) {
-	    channels.erase(chanName);
+	for (size_t i = 0; i < channelNames.size(); ++i)
+    {
+		std::string chanName = channelNames[i];
+		std::map<std::string, Channel>::iterator it = channels.find(chanName);
+		if (it == channels.end()) {
+			sendNumeric(client.fd, "403", chanName + " :No such channel");
+			continue;
+		}
+		
+		Channel& ch = it->second;
+		
+		if (!ch.isMember(client.fd)) {
+			sendNumeric(client.fd, "442", chanName + " :You're not on that channel");
+			continue;
+		}
+		
+		std::string line = ":" + client.prefix() + " PART " + chanName + " :" + reason;
+		
+		const std::set<int>& memberSet = ch.getMembers();
+		for (std::set<int>::const_iterator mit = memberSet.begin(); mit != memberSet.end(); ++mit)
+		{
+			Utils::sendLine(*mit, line, clients);
+		}
+		
+		ch.removeMember(client.fd);
+		
+		if (ch.getMemberCount() == 0)
+		{
+			channels.erase(chanName);
+		}
 	}
 }
 
@@ -476,20 +511,20 @@ void Cmd::topic()
 	}
 	
 	if (!parsed.hasTrailing) {
-		if (if (ch.getTopic().empty()))
+		if (ch.getTopic().empty())
 			sendNumeric(client.fd, "331", chanName + " :No topic is set");
 		else
-			sendNumeric(client.fd, "332", chanName + " :" + ch.topic);
+			sendNumeric(client.fd, "332", chanName + " :" + ch.getTopic());
 		return;
 	}
 	
-	if (ch.topicOpOnly && !ch.isOp(client.fd)) {
+	if (ch.getTopicOpOnly() && !ch.isOp(client.fd)) {
 		sendNumeric(client.fd, "482", chanName + " :You're not channel operator");
 		return;
 	}
 	
 	ch.setTopic(parsed.trailing);
-	std::string line = ":" + client.prefix() + " TOPIC " + chanName + " :" + ch.topic;
+	std::string line = ":" + client.prefix() + " TOPIC " + chanName + " :" + ch.getTopic();
 	Utils::sendLine(client.fd, line, clients);
 	broadcastToChannel(ch, client.fd, line);
 }
@@ -527,19 +562,19 @@ void Cmd::mode()
 			modes += "l";
 		
 		std::string params;
-		if (ch.getHasKey()) params += " " + ch.key;
-		if (ch.getHasLimit()) params += " " + Utils::toString(ch.userLimit);
+		if (ch.getHasKey()) params += " " + ch.getKey();
+		if (ch.getHasLimit()) params += " " + Utils::toString(ch.getUserLimit());
 		
-		sendNumeric(client.fd, "324", ch.name + " " + modes + params);
+		sendNumeric(client.fd, "324", ch.getName() + " " + modes + params);
 		return;
 	}
 	
 	if (!ch.isMember(client.fd)) {
-		sendNumeric(client.fd, "442", ch.name + " :You're not on that channel");
+		sendNumeric(client.fd, "442", ch.getName() + " :You're not on that channel");
 		return;
 	}
 	if (!ch.isOp(client.fd)) {
-		sendNumeric(client.fd, "482", ch.name + " :You're not channel operator");
+		sendNumeric(client.fd, "482", ch.getName() + " :You're not channel operator");
 		return;
 	}
 	
@@ -562,10 +597,10 @@ void Cmd::mode()
 		}
 		
 		if (m == 'i') {
-			ch.inviteOnly = adding;
+			ch.setInviteOnly(adding);
 			applied += (adding ? "+i" : "-i");
 		} else if (m == 't') {
-			ch.topicOpOnly = adding;
+			ch.setTopicOpOnly(adding);
 			applied += (adding ? "+t" : "-t");
 		} else if (m == 'k') {
 			if (adding) {
@@ -575,7 +610,7 @@ void Cmd::mode()
 				}
 				ch.setKey(parsed.args[argi++]);
 				applied += "+k";
-				appliedParams.push_back(ch.key);
+				appliedParams.push_back(ch.getKey());
 			} else {
 				ch.removeKey();
 				applied += "-k";
@@ -588,7 +623,7 @@ void Cmd::mode()
 				}
 				ch.setUserLimit(std::max(0, ::atoi(parsed.args[argi++].c_str())));
 				applied += "+l";
-				appliedParams.push_back(Utils::toString(ch.userLimit));
+				appliedParams.push_back(Utils::toString(ch.getUserLimit()));
 			} else {
 				ch.removeUserLimit();
 				applied += "-l";
@@ -620,7 +655,7 @@ void Cmd::mode()
 	if (applied.empty())
 		return;
 	
-	std::string params = ch.name + " " + applied;
+	std::string params = ch.getName() + " " + applied;
 	for (size_t i = 0; i < appliedParams.size(); ++i)
 		params += " " + appliedParams[i];
 	

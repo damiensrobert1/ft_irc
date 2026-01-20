@@ -128,17 +128,17 @@ bool Channel::isInvited(int fd) const
 
 // Setters
 
-void Channel::setName(const std::string name)
+void Channel::setName(const std::string& name)
 {
 	this->name = name;
 }
 
-void Channel::setTopic(const std::string topic)
+void Channel::setTopic(const std::string& topic)
 {
 	this->topic = topic;
 }
 
-void Channel::setKey(const std::string key)
+void Channel::setKey(const std::string& key)
 {
 	this->key = key;
 	this->hasKey = true;
