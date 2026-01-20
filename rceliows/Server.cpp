@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 14:07:25 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/20 15:10:44 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -217,15 +217,14 @@ void Server::handleCommand(int fd, const std::string& line)
 		markForClose(fd);
 		return;
 	}
+	if (p.cmd == "CAP" {)
+		return;
+	}
 	Cmd cmd(c.fd, p, clients, password, to_close, channels);
 	if (p.cmd == "PASS")
 	{
 		cmd.pass();
 		cmd.tryRegister();
-		return;
-	}
-	if (!c.authed) {
-		Utils::sendLine(fd, "464 :Password required (PASS).", clients);
 		return;
 	}
 	if (p.cmd == "NICK") {
@@ -238,10 +237,6 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return; 
 	}
-	if (p.cmd == "USERHOST") {
-		cmd.userhost();
-		cmd.tryRegister();
-		return; }
 	if (! c.registered) {
 		Utils::sendLine(fd, "451 :You have not registered.", clients);
 		return;
@@ -250,6 +245,10 @@ void Server::handleCommand(int fd, const std::string& line)
 		Utils::sendLine(fd,
 			"PONG" + (p.hasTrailing ? p.trailing : ""),
 			clients);
+		return;
+	}
+	if (p.cmd == "USERHOST") {
+		cmd.userhost();
 		return;
 	}
 	if (p.cmd == "JOIN") {
