@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/20 18:00:48 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/21 16:23:40 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -212,7 +212,6 @@ void Server::handleCommand(int fd, const std::string& line)
 	Parsed p(line);
 	p.parse();
 	Cmd cmd(c.getFd(), p, clients, password, to_close, channels);
-	std::cout << p.cmd << std::endl;
 	if (p.cmd.empty())
 		return;
 	if (p.cmd == "QUIT")
@@ -240,7 +239,7 @@ void Server::handleCommand(int fd, const std::string& line)
 		cmd.tryRegister();
 		return; 
 	}
-	if (c.isRegistered()) {
+	if (! c.isRegistered()) {
 		Utils::sendLine(fd, "451 :You have not registered.", clients);
 		return;
 	}
@@ -263,6 +262,10 @@ void Server::handleCommand(int fd, const std::string& line)
 		return;
 	}
 	if (p.cmd == "WHO") {
+		cmd.who();
+		return;
+	}
+	if (p.cmd == "WHOIS") {
 		cmd.who();
 		return;
 	}

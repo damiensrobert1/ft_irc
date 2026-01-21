@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/20 18:14:59 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/21 16:18:12 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,6 @@
 #include "Channel.hpp"
 #include "Utils.hpp"
 
-#include <iostream>
 Cmd::Cmd(int fd, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels)
 	:fd(fd), parsed(p), clients(clients), password(password), to_close(to_close), channels(channels)
 {
@@ -28,14 +27,11 @@ Cmd::Cmd(int fd, const Parsed& p, std::map<int, Client> &clients, std::string pa
 
 void Cmd::sendNumeric(int fd, const std::string& cmdOrNum, const std::string& msg)
 {
-		std::cout << "fd is :" << fd << std::endl;
 		std::string nick = "*";
 		std::map<int, Client>::iterator it = clients.find(fd);
 		if (it != clients.end() && !it->second.getNick().empty())
 			nick = it->second.getNick();
-		std::cout << "nick is :" << nick << std::endl;
 		Utils::sendLine(fd, ":ircserv " + cmdOrNum + " " + nick + " " + msg, clients);
-		std::cout << "nick is :" << nick << std::endl;
 }
 
 void Cmd::markForClose(int fd)
@@ -56,9 +52,7 @@ void Cmd::pass()
 		return;
 	}
 	std::string pass = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
-	std::cout << "pass : " << pass << " password :" << password << std::endl;
 	if (pass == password) {
-		std::cout << "password is success" << std::endl;
 		client.addAuthed();
 		sendNumeric(client.getFd(), "NOTICE", ":Password accepted.");
 	}
@@ -370,6 +364,35 @@ void Cmd::who()
 	Client &client = clients[fd];
 	std::string mask = parsed.args.empty() ? "*" : parsed.args[0];
 	sendNumeric(client.getFd(), "315", mask + " :End of /WHO list.");
+}
+
+void Cmd::whois()
+{
+	Client &client = clients[fd];
+	std::string mask = parsed.args.empty() ? "*" : parsed.args[0];
+	if (parsed.args.empty()) {
+		sendNumeric(client.getFd(), "461", "WHOIS :Not enough parameters");
+		return;
+	}
+	
+	std::string nick = parsed.args[0];
+	Client* t = Utils::findByNick(nick, clients);
+	
+	if (!t) {
+		sendNumeric(client.getFd(), "401", nick + " :No such nick");
+		sendNumeric(client.getFd(), "318", nick + " :End of /WHOIS list.");
+		return;
+	}
+	
+	sendNumeric(client.getFd(), "311",
+	    client.getNick() + " " +
+	    t->getNick() + " " +
+	    t->getUser() + " " +
+	    t->getIp() + " * :" +
+	    t->getRealname()
+	);
+	
+	sendNumeric(client.getFd(), "318", t->getNick() + " :End of /WHOIS list.");
 }
 
 void Cmd::privmsg()
