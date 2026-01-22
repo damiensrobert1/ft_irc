@@ -16,13 +16,11 @@
 #include "Server.hpp"
 
 volatile sig_atomic_t g_running = 1;
-static void on_sigint(int)
-{
+static void on_sigint(int) {
 	g_running = 0;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
 	std::signal(SIGINT, on_sigint);
 	std::signal(SIGTERM, on_sigint);
 	

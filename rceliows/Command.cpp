@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/19 14:09:04 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 18:30:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,13 +20,24 @@
 #include "Channel.hpp"
 #include "Utils.hpp"
 
-Cmd::Cmd(int fd, const Parsed& p, std::map<int, Client> &clients, std::string password, std::set<int> &to_close, std::map<std::string, Channel> &channels)
-	:fd(fd), parsed(p), clients(clients), password(password), to_close(to_close), channels(channels)
+Cmd::Cmd(
+    int fd,
+    const Parsed& p,
+    std::map<int, Client>& clients,
+    std::string password,
+    std::set<int>& to_close,
+    std::map<std::string, Channel>& channels
+)
+    : fd(fd)
+    , parsed(p)
+    , clients(clients)
+    , password(password)
+    , to_close(to_close)
+    , channels(channels)
 {
 }
 
-void Cmd::sendNumeric(int fd, const std::string& cmdOrNum, const std::string& msg)
-{
+void Cmd::sendNumeric(int fd, const std::string& cmdOrNum, const std::string& msg) {
 	std::string nick = "*";
 	std::map<int, Client>::iterator it = clients.find(fd);
 	if (it != clients.end() && !it->second.getNick().empty())
@@ -34,15 +45,13 @@ void Cmd::sendNumeric(int fd, const std::string& cmdOrNum, const std::string& ms
 	Utils::sendLine(fd, ":ircserv " + cmdOrNum + " " + nick + " " + msg, clients);
 }
 
-void Cmd::markForClose(int fd)
-{
+void Cmd::markForClose(int fd) {
 	to_close.insert(fd);
 }
 
-void Cmd::pass()
-{
+void Cmd::pass() {
 	Client &client = clients[fd];
-	if (parsed.args.empty() && !parsed.hasTrailing) {
+	if (parsed.getArgs().empty() && !parsed.getHasTrailing()) {
 		sendNumeric(client.getFd(), "461", "PASS not enough parameters");
 		return;
 	}
@@ -50,7 +59,7 @@ void Cmd::pass()
 		sendNumeric(client.getFd(), "462", ":You may not reregister");
 		return;
 	}
-	std::string pass = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+	std::string pass = parsed.getHasTrailing() ? parsed.getTrailing() : parsed.getArgs()[0];
 	if (pass == password) {
 		client.addAuthed();
 		sendNumeric(client.getFd(), "NOTICE", ":Password accepted.");
@@ -63,12 +72,9 @@ void Cmd::pass()
 	tryRegister();
 }
 
-bool Cmd::nickInUse(const std::string& nick, int except_fd) const
-{
+bool Cmd::nickInUse(const std::string& nick, int except_fd) const {
 	for (std::map<int, Client>::iterator it = clients.begin();
-			it != clients.end();
-			++it)
-	{
+			it != clients.end(); ++it) {
 		if (it->first == except_fd)
 			continue;
 		if (Utils::toUpper(it->second.getNick()) == Utils::toUpper(nick))
@@ -77,23 +83,22 @@ bool Cmd::nickInUse(const std::string& nick, int except_fd) const
 	return false;
 }
 
-void Cmd::nick()
-{
+void Cmd::nick() {
 	Client &client = clients[fd];
 	
-	if (parsed.args.empty() && !parsed.hasTrailing) {
+	if (parsed.getArgs().empty() && !parsed.getHasTrailing()) {
 		sendNumeric(client.getFd(), "431", ":No nickname given");
 		return;
 	}
 	
-	std::string newNick = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+	std::string newNick = parsed.getHasTrailing() ? parsed.getTrailing() : parsed.getArgs()[0];
+
 	if (newNick.empty()) {
 		sendNumeric(client.getFd(), "432", ":Erroneous nickname");
 		return;
 	}
 	if (newNick.size() > 30)
 		newNick.resize(30);
-	
 	if (nickInUse(newNick, client.getFd())) {
 		sendNumeric(client.getFd(), "433", newNick + " :Nickname is already in use");
 		return;
@@ -105,7 +110,7 @@ void Cmd::nick()
 		return;
 	
 	client.setNick(newNick);
-	
+
 	if (oldNick.empty())
 		return;
 	
@@ -114,8 +119,7 @@ void Cmd::nick()
 	std::set<int> targets;
 	targets.insert(client.getFd());
 	
-	for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-	{
+	for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it) {
 		Channel &ch = it->second;
 		if (!ch.isMember(client.getFd()))
 			continue;
@@ -132,10 +136,10 @@ void Cmd::nick()
 }
 
 
-void Cmd::user()
-{
+void Cmd::user() {
 	Client &client = clients[fd];
-	if (parsed.args.size() < 3 || (!parsed.hasTrailing)) {
+
+	if (parsed.getArgs().size() < 3 || (!parsed.getHasTrailing())) {
 		sendNumeric(client.getFd(), "461", "USER :Not enough parameters");
 		return;
 	}
@@ -143,23 +147,24 @@ void Cmd::user()
 		sendNumeric(client.getFd(), "462", ":You may not reregister");
 		return;
 	}
-	client.settUser(parsed.args[0]);
-	client.setRealname(parsed.trailing);
+
+	client.settUser(parsed.getArgs()[0]);
+	client.setRealname(parsed.getTrailing());
 }
 
-void Cmd::userhost()
-{
+void Cmd::userhost() {
 	Client &client = clients[fd];
-	if (parsed.args.empty()) {
+
+	if (parsed.getArgs().empty()) {
 		sendNumeric(client.getFd(), "461", "USERHOST :Not enough parameters");
 		return;
 	}
 
 	std::string reply;
-	size_t limit = std::min<size_t>(5, parsed.args.size());
+	size_t limit = std::min<size_t>(5, parsed.getArgs().size());
 	
 	for (size_t i = 0; i < limit; ++i) {
-		Client* t = Utils::findByNick(parsed.args[i], clients);
+		Client* t = Utils::findByNick(parsed.getArgs()[i], clients);
 		if (!t)
 			continue;
 	
@@ -173,12 +178,14 @@ void Cmd::userhost()
 	sendNumeric(client.getFd(), "302", ":" + reply);
 }
 
-Channel &Cmd::getOrCreateChannel(const std::string& name)
-{
+Channel &Cmd::getOrCreateChannel(const std::string& name) {
 	std::map<std::string, Channel>::iterator it = channels.find(name);
+
 	if (it != channels.end())
 		return it->second;
+
 	Channel ch;
+
 	ch.setName(name);
 	channels[name] = ch;
 	return channels[name];
@@ -186,10 +193,9 @@ Channel &Cmd::getOrCreateChannel(const std::string& name)
 
 void Cmd::broadcastToChannel(const Channel& ch, int except_fd, const std::string& line) {
 	const std::set<int>& memberSet = ch.getMembers();
+
 	for (std::set<int>::const_iterator it = memberSet.begin();
-			it != memberSet.end();
-			++it)
-	{
+			it != memberSet.end(); ++it) {
 		int mfd = *it;
 		if (mfd == except_fd)
 			continue;
@@ -197,16 +203,16 @@ void Cmd::broadcastToChannel(const Channel& ch, int except_fd, const std::string
 	}
 }
 
-void Cmd::sendNamesList(Client& c, Channel& ch)
-{
+void Cmd::sendNamesList(Client& c, Channel& ch) {
 	std::string names;
 	const std::set<int>& memberSet = ch.getMembers();
+
 	for (std::set<int>::const_iterator it = memberSet.begin();
-			it != memberSet.end();
-			++it)
-	{
+			it != memberSet.end(); ++it) {
+
 		int mfd = *it;
 		std::map<int, Client>::iterator iter = clients.find(mfd);
+
 		if (iter == clients.end())
 			continue;
 		if (!names.empty())
@@ -221,42 +227,43 @@ void Cmd::sendNamesList(Client& c, Channel& ch)
 
 #include <sstream>
 
-std::vector<std::string>	splitArg(const std::string &s, char delimiter)
-{
+std::vector<std::string>	splitArg(const std::string &s, char delimiter) {
 	std::vector<std::string> tokens;
 	std::string token;
 	std::istringstream iss(s);
-	while (std::getline(iss, token, delimiter))
-	{
+
+	while (std::getline(iss, token, delimiter)) {
 		if (!token.empty())
 			tokens.push_back(token);
 	}
 	return tokens;
 }
 
-void Cmd::join()
-{
+void Cmd::join() {
 	Client &client = clients[fd];
-	if (parsed.args.empty() && !parsed.hasTrailing) {
+
+	if (parsed.getArgs().empty() && !parsed.getHasTrailing()) {
 		sendNumeric(client.getFd(), "461", "JOIN :Not enough parameters");
 		return;
 	}
-	std::string chanNameStr = parsed.hasTrailing ? parsed.trailing : parsed.args[0];
+
+	std::string chanNameStr = parsed.getHasTrailing() ? parsed.getTrailing() : parsed.getArgs()[0];
+
 	if (chanNameStr.empty() || chanNameStr[0] != '#') {
 		sendNumeric(client.getFd(), "479", chanNameStr + " :Illegal channel name");
 		return;
 	}
 
 	std::vector<std::string> channelNames = splitArg(chanNameStr, ',');
-	
 	std::vector<std::string> providedKeys;
-	if (parsed.args.size() >= 2)
-		providedKeys = splitArg(parsed.args[1], ',');
+
+	if (parsed.getArgs().size() >= 2)
+		providedKeys = splitArg(parsed.getArgs()[1], ',');
 	
-	for (size_t i = 0; i < channelNames.size(); ++i)
-	{
+	for (size_t i = 0; i < channelNames.size(); ++i) {
 		std::string chanName = channelNames[i];
 		std::string providedKey = "";
+
 		if (i < providedKeys.size())
 			providedKey = providedKeys[i];
 
@@ -264,26 +271,23 @@ void Cmd::join()
 			sendNumeric(client.getFd(), "479", chanName + " :Illegal channel name");
 			return;
 		}
+
 		Channel& ch = getOrCreateChannel(chanName);
-		
+
 		if (ch.getHasLimit() && ch.getMemberCount() >= static_cast<size_t>(ch.getUserLimit()) && !ch.isMember(client.getFd())) {
 			sendNumeric(client.getFd(), "471", ch.getName() + " :Cannot join channel (+l)");
 			continue;
 		}
 		
-		if (ch.getInviteOnly() && !ch.isMember(client.getFd()))
-		{
-			if (!ch.isInvited(client.getFd()))
-			{
+		if (ch.getInviteOnly() && !ch.isMember(client.getFd())) {
+			if (!ch.isInvited(client.getFd())) {
 				sendNumeric(client.getFd(), "473", ch.getName() + " :Cannot join channel (+i)");
 				continue;
 			}
 		}
 		
-		if (ch.getHasKey() && !ch.isMember(client.getFd()))
-		{
-			if (providedKey != ch.getKey())
-			{
+		if (ch.getHasKey() && !ch.isMember(client.getFd())) {
+			if (providedKey != ch.getKey()) {
 				sendNumeric(client.getFd(), "475", ch.getName() + " :Cannot join channel (+k)");
 				continue;
 			}
@@ -313,20 +317,17 @@ void Cmd::join()
 	}
 }
 
-void Cmd::part()
-{
+void Cmd::part() {
 	Client &client = clients[fd];
-	if (parsed.args.empty())
-	{
+	if (parsed.getArgs().empty()) {
 		sendNumeric(client.getFd(), "461", "PART :Not enough parameters");
 		return;
 	}
 	
-	std::vector<std::string> channelNames = splitArg(parsed.args[0], ',');
-	std::string reason = parsed.hasTrailing ? parsed.trailing : "Leaving";
+	std::vector<std::string> channelNames = splitArg(parsed.getArgs()[0], ',');
+	std::string reason = parsed.getHasTrailing() ? parsed.getTrailing() : "Leaving";
 	
-	for (size_t i = 0; i < channelNames.size(); ++i)
-	{
+	for (size_t i = 0; i < channelNames.size(); ++i) {
 		std::string chanName = channelNames[i];
 		std::map<std::string, Channel>::iterator it = channels.find(chanName);
 		if (it == channels.end()) {
@@ -344,49 +345,75 @@ void Cmd::part()
 		std::string line = ":" + client.getPrefix() + " PART " + chanName + " :" + reason;
 		
 		const std::set<int>& memberSet = ch.getMembers();
-		for (std::set<int>::const_iterator mit = memberSet.begin(); mit != memberSet.end(); ++mit)
-		{
+		for (std::set<int>::const_iterator mit = memberSet.begin(); mit != memberSet.end(); ++mit) {
 			Utils::sendLine(*mit, line, clients);
 		}
 		
 		ch.removeMember(client.getFd());
 		
 		if (ch.getMemberCount() == 0)
-		{
 			channels.erase(chanName);
-		}
 	}
 }
 
-void Cmd::who()
-{
+void Cmd::who() {
 	Client &client = clients[fd];
-	std::string mask = parsed.args.empty() ? "*" : parsed.args[0];
+	std::string mask = parsed.getArgs().empty() ? "*" : parsed.getArgs()[0];
 	sendNumeric(client.getFd(), "315", mask + " :End of /WHO list.");
 }
 
-void Cmd::privmsg()
-{
+void Cmd::whois() {
 	Client &client = clients[fd];
-	if (parsed.args.empty()) {
+
+	if (parsed.getArgs().empty()) {
+		sendNumeric(client.getFd(), "461", "WHOIS :Not enough parameters");
+		return;
+	}
+	
+	std::string nick = parsed.getArgs()[0];
+	Client* t = Utils::findByNick(nick, clients);
+	
+	if (!t) {
+		sendNumeric(client.getFd(), "401", nick + " :No such nick");
+		sendNumeric(client.getFd(), "318", nick + " :End of /WHOIS list.");
+		return;
+	}
+	
+	sendNumeric(client.getFd(), "311",
+	    t->getNick() + " " +
+	    t->getUser() + " " +
+	    t->getIp() + " * :" +
+	    t->getRealname()
+	);
+	
+	sendNumeric(client.getFd(), "318", t->getNick() + " :End of /WHOIS list.");
+}
+
+void Cmd::privmsg() {
+	Client &client = clients[fd];
+
+	if (parsed.getArgs().empty()) {
 		sendNumeric(client.getFd(), "411", ":No recipient given (PRIVMSG)");
 		return;
 	}
-	if (!parsed.hasTrailing) {
+	if (!parsed.getHasTrailing()) {
 		sendNumeric(client.getFd(), "412", ":No text to send");
 		return;
 	}
-	
-	std::string target = parsed.args[0];
-	std::string text = parsed.trailing;
+
+	std::string target = parsed.getArgs()[0];
+	std::string text = parsed.getTrailing();
 	
 	if (!target.empty() && target[0] == '#') {
 		std::map<std::string, Channel>::iterator it = channels.find(target);
+
 		if (it == channels.end()) {
 			sendNumeric(client.getFd(), "403", target + " :No such channel");
 			return;
 		}
+
 		Channel& ch = it->second;
+
 		if (!ch.isMember(client.getFd())) {
 			sendNumeric(client.getFd(), "442", target + " :You're not on that channel");
 			return;
@@ -396,31 +423,36 @@ void Cmd::privmsg()
 		broadcastToChannel(ch, client.getFd(), line);
 	} else {
 		Client* dst = Utils::findByNick(target, clients);
+
 		if (!dst) {
 			sendNumeric(client.getFd(), "401", target + " :No such nick");
 			return;
 		}
+
 		Utils::sendFromClient(dst->getFd(), client, "PRIVMSG", dst->getNick() + " :" + text, clients);
 	}
 }
 
-void Cmd::kick()
-{
+void Cmd::kick() {
 	Client &client = clients[fd];
-	if (parsed.args.size() < 2) {
+
+	if (parsed.getArgs().size() < 2) {
 		sendNumeric(client.getFd(), "461", "KICK :Not enough parameters");
 		return;
 	}
-	std::string chanName = parsed.args[0];
-	std::string nick = parsed.args[1];
-	std::string reason = parsed.hasTrailing ? parsed.trailing : "Kicked";
-	
+
+	std::string chanName = parsed.getArgs()[0];
+	std::string nick = parsed.getArgs()[1];
+	std::string reason = parsed.getHasTrailing() ? parsed.getTrailing() : "Kicked";
 	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+
 	if (it == channels.end()) {
 		sendNumeric(client.getFd(), "403", chanName + " :No such channel");
 		return;
 	}
+
 	Channel& ch = it->second;
+
 	if (!ch.isMember(client.getFd())) {
 		sendNumeric(client.getFd(), "442", chanName + " :You're not on that channel");
 		return;
@@ -431,6 +463,7 @@ void Cmd::kick()
 	}
 	
 	Client* victim = Utils::findByNick(nick, clients);
+
 	if (!victim || !ch.isMember(victim->getFd())) {
 		sendNumeric(client.getFd(), "441", nick + " " + chanName + " :They aren't on that channel");
 		return;
@@ -446,21 +479,23 @@ void Cmd::kick()
 		channels.erase(chanName);
 }
 
-void Cmd::invite()
-{
+void Cmd::invite() {
 	Client &client = clients[fd];
-	if (parsed.args.size() < 2) {
+
+	if (parsed.getArgs().size() < 2) {
 		sendNumeric(client.getFd(), "461", "INVITE :Not enough parameters");
 		return;
 	}
-	std::string nick = parsed.args[0];
-	std::string chanName = parsed.args[1];
-	
+
+	std::string nick = parsed.getArgs()[0];
+	std::string chanName = parsed.getArgs()[1];
 	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+
 	if (it == channels.end()) {
 		sendNumeric(client.getFd(), "403", chanName + " :No such channel");
 		return;
 	}
+
 	Channel& ch = it->second;
 	
 	if (!ch.isMember(client.getFd())) {
@@ -473,6 +508,7 @@ void Cmd::invite()
 	}
 	
 	Client* dst = Utils::findByNick(nick, clients);
+
 	if (!dst) {
 		sendNumeric(client.getFd(), "401", nick + " :No such nick");
 		return;
@@ -488,53 +524,55 @@ void Cmd::invite()
 	Utils::sendFromClient(dst->getFd(), client, "INVITE", dst->getNick() + " :" + chanName, clients);
 }
 
-void Cmd::topic()
-{
+void Cmd::topic() {
 	Client &client = clients[fd];
-	if (parsed.args.empty()) {
+
+	if (parsed.getArgs().empty()) {
 		sendNumeric(client.getFd(), "461", "TOPIC :Not enough parameters");
 		return;
 	}
-	std::string chanName = parsed.args[0];
+
+	std::string chanName = parsed.getArgs()[0];
 	std::map<std::string, Channel>::iterator it = channels.find(chanName);
+
 	if (it == channels.end()) {
 		sendNumeric(client.getFd(), "403", chanName + " :No such channel");
 		return;
 	}
+
 	Channel& ch = it->second;
 	
 	if (!ch.isMember(client.getFd())) {
 		sendNumeric(client.getFd(), "442", chanName + " :You're not on that channel");
 		return;
 	}
-	
-	if (!parsed.hasTrailing) {
-		if (ch.getTopic().empty())
-			sendNumeric(client.getFd(), "331", chanName + " :No topic is set");
-		else
-			sendNumeric(client.getFd(), "332", chanName + " :" + ch.getTopic());
-		return;
-	}
-	
-	if (ch.getTopicOpOnly() && !ch.isOp(client.getFd())) {
-		sendNumeric(client.getFd(), "482", chanName + " :You're not channel operator");
-		return;
-	}
-	
-	ch.setTopic(parsed.trailing);
+    if (!parsed.getHasTrailing()) {
+        if (ch.getTopic().empty())
+            sendNumeric(client.getFd(), "331", chanName + " :No topic is set");
+        else
+            sendNumeric(client.getFd(), "332", chanName + " :" + ch.getTopic());
+        return;
+    }
+    if (ch.getTopicOpOnly() && !ch.isOp(client.getFd())) {
+        sendNumeric(client.getFd(), "482", chanName + " :You're not channel operator");
+        return;
+    }
+
+	ch.setTopic(parsed.getTrailing());
 	std::string line = ":" + client.getPrefix() + " TOPIC " + chanName + " :" + ch.getTopic();
 	Utils::sendLine(client.getFd(), line, clients);
 	broadcastToChannel(ch, client.getFd(), line);
 }
 
-void Cmd::mode()
-{
+void Cmd::mode() {
 	Client &client = clients[fd];
-	if (parsed.args.empty()) {
+
+	if (parsed.getArgs().empty()) {
 		sendNumeric(client.getFd(), "461", "MODE :Not enough parameters");
 		return;
 	}
-	std::string target = parsed.args[0];
+
+	std::string target = parsed.getArgs()[0];
 	
 	if (target.empty() || target[0] != '#') {
 		sendNumeric(client.getFd(), "472", ":Only channel MODE is supported here");
@@ -548,7 +586,7 @@ void Cmd::mode()
 	}
 	Channel& ch = it->second;
 	
-	if (parsed.args.size() == 1) {
+	if (parsed.getArgs().size() == 1) {
 		std::string modes = "+";
 		if (ch.getInviteOnly())
 			modes += "i";
@@ -576,7 +614,7 @@ void Cmd::mode()
 		return;
 	}
 	
-	std::string modeStr = parsed.args[1];
+	std::string modeStr = parsed.getArgs()[1];
 	bool adding = true;
 	size_t argi = 2;
 	
@@ -602,11 +640,11 @@ void Cmd::mode()
 			applied += (adding ? "+t" : "-t");
 		} else if (m == 'k') {
 			if (adding) {
-				if (argi >= parsed.args.size()) {
+				if (argi >= parsed.getArgs().size()) {
 					sendNumeric(client.getFd(), "461", "MODE :Not enough parameters");
 					return;
 				}
-				ch.setKey(parsed.args[argi++]);
+				ch.setKey(parsed.getArgs()[argi++]);
 				applied += "+k";
 				appliedParams.push_back(ch.getKey());
 			} else {
@@ -615,11 +653,11 @@ void Cmd::mode()
 			}
 		} else if (m == 'l') {
 			if (adding) {
-				if (argi >= parsed.args.size()) {
+				if (argi >= parsed.getArgs().size()) {
 					sendNumeric(client.getFd(), "461", "MODE :Not enough parameters");
 					return;
 				}
-				ch.setUserLimit(std::max(0, ::atoi(parsed.args[argi++].c_str())));
+				ch.setUserLimit(std::max(0, ::atoi(parsed.getArgs()[argi++].c_str())));
 				applied += "+l";
 				appliedParams.push_back(Utils::toString(ch.getUserLimit()));
 			} else {
@@ -627,11 +665,11 @@ void Cmd::mode()
 				applied += "-l";
 			}
 		} else if (m == 'o') {
-			if (argi >= parsed.args.size()) {
+			if (argi >= parsed.getArgs().size()) {
 				sendNumeric(client.getFd(), "461", "MODE :Not enough parameters");
 				return;
 			}
-			std::string nick = parsed.args[argi++];
+			std::string nick = parsed.getArgs()[argi++];
 			Client* dst = Utils::findByNick(nick, clients);
 			if (!dst || !ch.isMember(dst->getFd())) {
 				sendNumeric(client.getFd(), "441", nick + " " + ch.getName() + " :They aren't on that channel");
@@ -662,8 +700,7 @@ void Cmd::mode()
 	broadcastToChannel(ch, client.getFd(), line);
 }
 
-void Cmd::tryRegister()
-{
+void Cmd::tryRegister() {
 	Client &client = clients[fd];
 	if (client.isRegistered())
 		return;

@@ -6,19 +6,19 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 12:43:46 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/16 15:16:27 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 18:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
 
 Client::Client()
-	: fd(-1), ip("")
+	: fd(-1),
+	  ip("")
 {
 }
 
-Client::Client(int fd, std::string ip)
-{
+Client::Client(int fd, std::string ip) {
 	this->fd = fd;
 	this->ip = ip;
 	outbuf = "";
@@ -30,8 +30,7 @@ Client::Client(int fd, std::string ip)
 	authed = false;
 }
 
-Client::Client(const Client& other)
-{
+Client::Client(const Client& other) {
     this->fd = other.fd;
     this->ip = other.ip;
     this->outbuf = other.outbuf;
@@ -43,10 +42,8 @@ Client::Client(const Client& other)
     this->authed = other.authed;
 }
 
-Client& Client::operator=(const Client& other)
-{
-    if (this != &other)
-    {
+Client& Client::operator=(const Client& other) {
+    if (this != &other) {
         this->fd = other.fd;
 	    this->ip = other.ip;
 		this->outbuf = other.outbuf;
@@ -62,40 +59,33 @@ Client& Client::operator=(const Client& other)
 
 Client::~Client() {}
 
-// Getters
+// Getters (const versions)
 
-int Client::getFd() const
-{
+int Client::getFd() const {
 	return this->fd;
 }
 
-std::string Client::getIp() const
-{
+std::string Client::getIp() const {
 	return this->ip;
 }
 
-std::string Client::getOutbuf() const
-{
+std::string Client::getOutbuf() const {
 	return this->outbuf;
 }
 
-std::string Client::getInbuf() const
-{
+std::string Client::getInbuf() const {
 	return this->inbuf;
 }
 
-std::string Client::getNick() const
-{
+std::string Client::getNick() const {
 	return this->nick;
 }
 
-std::string Client::getUser() const
-{
+std::string Client::getUser() const {
 	return this->user;
 }
 
-std::string Client::getRealname() const
-{
+std::string Client::getRealname() const {
 	return this->realname;
 }
 
@@ -105,69 +95,66 @@ std::string Client::getPrefix() const {
 	return n + "!" + u + "@" + (ip.empty() ? "0.0.0.0" : ip);
 }
 
-bool Client::isRegistered() const
-{
+bool Client::isRegistered() const {
 	return this->registered;	
 }
 
-bool Client::isAuthed() const
-{
+bool Client::isAuthed() const {
 	return this->authed;	
+}
+
+// Getters (non-const versions)
+
+std::string& Client::getOutbuf() {
+	return this->outbuf;
+}
+
+std::string& Client::getInbuf() {
+	return this->inbuf;
 }
 
 // Setters
 
-void Client::setFd(const int fd)
-{
+void Client::setFd(const int fd) {
 	this->fd = fd;
 }
 
-void Client::setIp(const std::string& ip)
-{
+void Client::setIp(const std::string& ip) {
 	this->ip = ip;	
 }
 
-void Client::setOutbuf(const std::string& outbuf)
-{
+void Client::setOutbuf(const std::string& outbuf) {
 	this->outbuf = outbuf;	
 }
 
-void Client::setInbuf(const std::string& inbuf)
-{
+void Client::setInbuf(const std::string& inbuf) {
 	this->inbuf = inbuf;	
 }
 
-void Client::setNick(const std::string& nick)
-{
+void Client::setNick(const std::string& nick) {
 	this->nick = nick;	
 }
 
-void Client::settUser(const std::string& user)
-{
+void Client::settUser(const std::string& user) {
 	this->user = user;
 }
 
-void Client::setRealname(const std::string& realname)
-{
+void Client::setRealname(const std::string& realname) {
 	this->realname = realname;	
 }
 
-void Client::addRegistered()
-{
+void Client::addRegistered() {
 	this->registered = true;
 }
 
-void Client::removeRegistered()
-{
+void Client::removeRegistered() {
 	this->registered = false;	
 }
 
-void Client::addAuthed()
-{
+void Client::addAuthed() {
 	this->authed = true;
 }
 
-void Client::removeAuthed()
-{
+void Client::removeAuthed() {
 	this->authed = false;	
 }

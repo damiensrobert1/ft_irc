@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 16:57:17 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 18:39:18 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 18:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ class Client
 		Client& operator=(const Client& other);
 		~Client();
 
-		// Getters
+		// Getters (const versions)
 		int getFd() const;
 		std::string getIp() const;
 		std::string getOutbuf() const;
@@ -48,10 +48,13 @@ class Client
 		std::string getNick() const;
 		std::string getUser() const;
 		std::string getRealname() const;
-//		std::set<std::string> getInvited() const;
 		std::string getPrefix() const;
 		bool isRegistered() const;
 		bool isAuthed() const;
+
+		// Getters (non-const versions)
+		std::string& getOutbuf();
+		std::string& getInbuf();
 
 		// Setters
 		void setFd(const int fd);
@@ -61,7 +64,6 @@ class Client
 		void setNick(const std::string& nick);
 		void settUser(const std::string& user);
 		void setRealname(const std::string& realname);
-//		void setInvited() const;
 		void addRegistered();
 		void removeRegistered();
 		void addAuthed();

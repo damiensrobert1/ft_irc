@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 13:56:40 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/15 14:15:41 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 18:30:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,13 +16,39 @@
 #include "Parsed.hpp"
 #include "Utils.hpp"
 
-Parsed::Parsed(std::string line)
-	: line(line), cmd(""), args(), trailing(""), hasTrailing(false)
+Parsed::Parsed(const std::string& line)
+	: line(line), 
+	  cmd(""), 
+	  args(), 
+	  trailing(""), 
+	  hasTrailing(false)
 {
 }
 
-void Parsed::parse()
+Parsed::Parsed(const Parsed& other)
+	: line(other.line), 
+	  cmd(other.cmd), 
+	  args(other.args), 
+	  trailing(other.trailing), 
+	  hasTrailing(other.hasTrailing)
 {
+}
+
+Parsed& Parsed::operator=(const Parsed& other) {
+	if (this != &other)
+	{
+		this->line = other.line;
+		this->cmd = other.cmd;
+		this->args = other.args;
+		this->trailing = other.trailing;
+		this->hasTrailing = other.hasTrailing;
+	}
+	return *this;
+}
+
+Parsed::~Parsed() {}
+
+void Parsed::parse() {
 	std::string s = line;
 	if (!s.empty() && s[0] == ':')
 	{
@@ -35,8 +61,7 @@ void Parsed::parse()
 	cmd = Utils::toUpper(cmd);
 	
 	std::string token;
-	while (iss >> token)
-	{
+	while (iss >> token) {
 		if (!token.empty() && token[0] == ':')
 		{
 			hasTrailing = true;
@@ -58,4 +83,22 @@ void Parsed::parse()
 			args.push_back(token);
 		}
 	}
+}
+
+// Getters
+
+const std::string& Parsed::getCmd() const {
+	return this->cmd;
+}
+
+const std::vector<std::string>& Parsed::getArgs() const {
+	return this->args;
+}
+
+const std::string& Parsed::getTrailing() const {
+	return this->trailing;
+}
+
+bool Parsed::getHasTrailing() const {
+	return this->hasTrailing;
 }

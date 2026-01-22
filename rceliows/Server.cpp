@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/20 15:10:44 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 18:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,25 +28,26 @@
 
 extern volatile sig_atomic_t g_running;
 
-Server::Server(const std::string& port, const std::string& password)
-    : port(port), password(password), listen_fd(-1) {}
-
-bool Server::start()
+Server::Server(
+	const std::string& port,
+	const std::string& password
+)
+    : port(port), 
+	  password(password), 
+	  listen_fd(-1)
 {
+}
+
+bool Server::start() {
 	if (!createListenSocket())
 		return false;
 	std::cout << "Listening on port " << port << "...\n";
 	return true;
 }
 
-bool Server::setNonBlocking(int fd)
-{
-	int flags = fcntl(fd, F_GETFL, 0);
-	if (flags < 0)
-		return false;
-  	return (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
+bool Server::setNonBlocking(int fd) {
+    return (fcntl(fd, F_SETFL, O_NONBLOCK) != -1);
 }
-
 
 bool Server::createListenSocket() {
 	struct addrinfo hints;
@@ -57,8 +58,7 @@ bool Server::createListenSocket() {
 	
 	struct addrinfo* res = NULL;
 	int g = getaddrinfo(NULL, port.c_str(), &hints, &res);
-	if (g != 0)
-	{
+	if (g != 0) {
 		std::cerr << "getaddrinfo: " << gai_strerror(g) << "\n";
 		return false;
 	}
@@ -72,8 +72,7 @@ bool Server::createListenSocket() {
 		int yes = 1;
 		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 		
-		if (!setNonBlocking(fd))
-		{
+		if (!setNonBlocking(fd)) {
 			::close(fd);
 			fd = -1;
 			continue;
@@ -99,8 +98,7 @@ bool Server::createListenSocket() {
 	return true;
 }
 
-void Server::buildPollFds()
-{
+void Server::buildPollFds() {
 	pfds.clear();
 	pollfd p;
 	p.fd = listen_fd;
@@ -109,9 +107,7 @@ void Server::buildPollFds()
 	pfds.push_back(p);
 
 	for (std::map<int, Client>::iterator it = clients.begin();
-	     it != clients.end();
-	     ++it)
-	{
+	     it != clients.end(); ++it) {
 		int fd = it->first;
 		Client &c= it->second;
 		pollfd pc;
@@ -124,8 +120,7 @@ void Server::buildPollFds()
 	}
 }
 
-void Server::acceptClients()
-{
+void Server::acceptClients() {
 	while (true)
 	{
 		sockaddr_storage ss;
@@ -164,36 +159,29 @@ void Server::acceptClients()
 	}
 }
 
-void Server::markForClose(int fd)
-{
+void Server::markForClose(int fd) {
 	to_close.insert(fd);
 }
 
-void Server::handleRead(int fd)
-{
+void Server::handleRead(int fd) {
 	std::map<int, Client>::iterator it = clients.find(fd);
 	if (it == clients.end())
 		return;
 	
 	char buf[4096];
-	while (true)
-	{
+	while (true) {
 		ssize_t n = ::recv(fd, buf, sizeof(buf), 0);
-		if (n > 0)
-		{
+		if (n > 0) {
 			it->second.getInbuf().append(buf, (size_t)n);
-			if (it->second.getInbuf().size() > 64 * 1024)
-			{
+			if (it->second.getInbuf().size() > 64 * 1024) {
 				markForClose(fd);
 				return;
 			}
 		}
-		else if (n == 0)
-		{
+		else if (n == 0) {
 			markForClose(fd);
 			return;
-		} else
-		{
+		} else {
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 			markForClose(fd);
@@ -210,97 +198,95 @@ void Server::handleCommand(int fd, const std::string& line)
 	Client& c = it->second;
 	Parsed p(line);
 	p.parse();
-	if (p.cmd.empty())
+	if (p.getCmd().empty())
 		return;
-	if (p.cmd == "QUIT")
-	{
+	if (p.getCmd() == "QUIT") {
 		markForClose(fd);
 		return;
 	}
-	if (p.cmd == "CAP")
-	{
+	if (p.getCmd() == "CAP") {
 		return;
 	}
 	Cmd cmd(c.getFd(), p, clients, password, to_close, channels);
-	if (p.cmd == "PASS")
-	{
+	if (p.getCmd() == "PASS") {
 		cmd.pass();
 		cmd.tryRegister();
 		return;
 	}
-	if (p.cmd == "NICK") {
+	if (p.getCmd() == "NICK") {
 		cmd.nick();
 		cmd.tryRegister();
 		return;
 	}
-	if (p.cmd == "USER") {
+	if (p.getCmd() == "USER") {
 		cmd.user();
 		cmd.tryRegister();
 		return; 
 	}
-	if (c.isRegistered()) {
-		Utils::sendLine(fd, "451 :You have not registered.", clients);
+	if (!c.isRegistered()) {
+		Utils::sendLine(fd, ":ircserv 451 * :You have not registered.", clients);
 		return;
 	}
-	if (p.cmd == "PING") {
+	if (p.getCmd() == "PING") {
 		Utils::sendLine(fd,
-			"PONG" + (p.hasTrailing ? p.trailing : ""),
+			":ircserv PONG ircserv :" + (p.getHasTrailing() ? p.getTrailing() : ""),
 			clients);
 		return;
 	}
-	if (p.cmd == "USERHOST") {
+	if (p.getCmd() == "USERHOST") {
 		cmd.userhost();
 		return;
 	}
-	if (p.cmd == "JOIN") {
+	if (p.getCmd() == "JOIN") {
 		cmd.join();
 		return;
 	}
-	if (p.cmd == "PART") {
+	if (p.getCmd() == "PART") {
 		cmd.part();
 		return;
 	}
-	if (p.cmd == "WHO") {
+	if (p.getCmd() == "WHO") {
 		cmd.who();
 		return;
 	}
-	if (p.cmd == "PRIVMSG") {
+	if (p.getCmd() == "WHOIS") {
+		cmd.whois();
+		return;
+	}
+	if (p.getCmd() == "PRIVMSG") {
 		cmd.privmsg();
 		return;
 	}
-	if (p.cmd == "KICK") { 
+	if (p.getCmd() == "KICK") { 
 		cmd.kick();
 		return;
 	}
-	if (p.cmd == "INVITE") {
+	if (p.getCmd() == "INVITE") {
 		cmd.invite();
 		return; 
 	}
-	if (p.cmd == "TOPIC") {
+	if (p.getCmd() == "TOPIC") {
 		cmd.topic();
 		return;
 	}
-	if (p.cmd == "MODE") {
+	if (p.getCmd() == "MODE") {
 		cmd.mode();
 		return;
 	}
-	Utils::sendLine(fd, "421 " + p.cmd + " :Unknown command", clients);
+	Utils::sendLine(fd, ":ircserv 421 " + c.getNick() + " " + p.getCmd() + " :Unknown command", clients);
 }
 
 void Server::processInputLines()
 {
 	for (std::map<int, Client>::iterator it = clients.begin();
-		it != clients.end();
-		++it)
-	{
+		it != clients.end(); ++it) {
 		int fd = it->first;
 		if (to_close.count(fd))
 			continue;
 		
 		Client& c = it->second;
 		
-		while (true)
-		{
+		while (true) {
 			size_t pos = c.getInbuf().find('\n');
 			if (pos == std::string::npos)
 				break;
@@ -319,50 +305,41 @@ void Server::processInputLines()
 	}
 }
 
-void Server::handleWrite(int fd)
-{
+void Server::handleWrite(int fd) {
 	std::map<int, Client>::iterator it = clients.find(fd);
 	if (it == clients.end())
 		return;
 	Client& c = it->second;
 	
-	while (!c.getOutbuf().empty())
-	{
+	while (!c.getOutbuf().empty()) {
 		ssize_t n = ::send(fd, c.getOutbuf().data(), c.getOutbuf().size(), 0);
 		if (n > 0){
 			c.getOutbuf().erase(0, (size_t)n);
 		}
-		else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-		{
+		else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
 			break;
 		}
-		else
-		{
+		else {
 			markForClose(fd);
 			break;
 		}
 	}
 }
 
-void Server::flushCloses()
-{
+void Server::flushCloses() {
 	for (std::set<int>::iterator it = to_close.begin();
-		it != to_close.end();
-		++it)
-	{
+		it != to_close.end(); ++it) {
 		int fd = *it;
 		removeClient(fd);
 	}
 	to_close.clear();
 }
 
-void Server::broadcastToChannel(const Channel& ch, int except_fd, const std::string& line)
-{
+void Server::broadcastToChannel(const Channel& ch, int except_fd, const std::string& line) {
 	const std::set<int>& memberSet = ch.getMembers();
 	
 	for (std::set<int>::const_iterator it = memberSet.begin();
-		it != memberSet.end(); ++it)
-	{
+		it != memberSet.end(); ++it) {
 		int mfd = *it;
 		if (mfd == except_fd)
 			continue;
@@ -370,13 +347,10 @@ void Server::broadcastToChannel(const Channel& ch, int except_fd, const std::str
 	}
 }
 
-void Server::partAllChannels(int fd)
-{
+void Server::partAllChannels(int fd) {
 	std::vector<std::string> empty;
 	for (std::map<std::string, Channel>::iterator it = channels.begin();
-		it != channels.end();
-		++it)
-	{
+		it != channels.end(); ++it) {
 		Channel& ch = it->second;
 		if (!ch.isMember(fd))
 			continue;
@@ -395,8 +369,7 @@ void Server::partAllChannels(int fd)
 }
 
 
-void Server::removeClient(int fd)
-{
+void Server::removeClient(int fd) {
 	std::map<int, Client>::iterator it = clients.find(fd);
 	if (it == clients.end()) {
 	  ::close(fd);
@@ -413,15 +386,11 @@ void Server::shutdownAll() {
 	std::vector<int> fds;
 	fds.reserve(clients.size());
 	for (std::map<int, Client>::iterator it = clients.begin();
-		it != clients.end();
-		++it)
-	{
+		it != clients.end(); ++it) {
 		fds.push_back(it->first);
 	}
 	for (std::vector<int>::iterator it = fds.begin();
-		it != fds.end();
-		++it)
-	{
+		it != fds.end(); ++it) {
 		int fd = *it;
 		removeClient(fd);
 	}
@@ -437,8 +406,7 @@ void Server::loop() {
 		buildPollFds();
 		
 		int ret = ::poll(pfds.data(), pfds.size(), 250);
-		if (ret < 0)
-		{
+		if (ret < 0) {
 			if (errno == EINTR)
 				continue;
 			std::cerr << "poll failed" << std::endl;
@@ -460,15 +428,14 @@ void Server::loop() {
 		
 		processInputLines();
 		
-		for (size_t i = 1; i < pfds.size(); ++i)
-		{
+		for (size_t i = 1; i < pfds.size(); ++i) {
 			if (to_close.count(pfds[i].fd))
 				continue;
 			if (pfds[i].revents & POLLOUT)
 				handleWrite(pfds[i].fd);
 		}
 	
-	flushCloses();
+		flushCloses();
 	}
 	
 	shutdownAll();
