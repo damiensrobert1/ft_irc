@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/16 12:36:32 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/21 16:18:12 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 14:29:04 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,7 +106,8 @@ void Cmd::nick()
 		return;
 	
 	client.setNick(newNick);
-	
+	clients[client.getFd()] = client;
+
 	if (oldNick.empty())
 		return;
 	
