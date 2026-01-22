@@ -6,7 +6,7 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/12 15:57:12 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/21 16:23:40 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 13:22:29 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -266,7 +266,7 @@ void Server::handleCommand(int fd, const std::string& line)
 		return;
 	}
 	if (p.cmd == "WHOIS") {
-		cmd.who();
+		cmd.whois();
 		return;
 	}
 	if (p.cmd == "PRIVMSG") {
