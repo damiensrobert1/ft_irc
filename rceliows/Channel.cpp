@@ -6,59 +6,59 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 14:48:39 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/18 19:16:00 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 20:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
 
-Channel::Channel() 
-    : name(""), 
-      topic(""), 
-      key(""), 
-      hasKey(false),
-      hasLimit(false),
-      userLimit(0),
-      inviteOnly(false),
-      topicOpOnly(false)
-{
+Channel::Channel()
+    : name("")
+    , topic("")
+    , key("")
+    , hasKey(false)
+    , hasLimit(false)
+    , userLimit(0)
+    , inviteOnly(false)
+    , topicOpOnly(false)
+    , members()
+    , operators()
+    , invited() {
 }
 
-Channel::Channel(const Channel& other) {
-    this->name = other.name;
-    this->topic = other.topic;
-    this->key = other.key;
-    this->hasKey = other.hasKey;
-    this->members = other.members;
-    this->operators = other.operators;
-    this->invited = other.invited;
-    this->hasLimit = other.hasLimit;
-    this->userLimit = other.userLimit;
-    this->inviteOnly = other.inviteOnly;
-    this->topicOpOnly = other.topicOpOnly;
+Channel::Channel(const Channel& other)
+    : name(other.name)
+    , topic(other.topic)
+    , key(other.key)
+    , hasKey(other.hasKey)
+    , hasLimit(other.hasLimit)
+    , userLimit(other.userLimit)
+    , inviteOnly(other.inviteOnly)
+    , topicOpOnly(other.topicOpOnly)
+    , members(other.members)
+    , operators(other.operators)
+    , invited(other.invited) {
 }
 
 Channel& Channel::operator=(const Channel& other) {
-    if (this != &other)
-    {
-        this->name = other.name;
-        this->topic = other.topic;
-        this->key = other.key;
-        this->hasKey = other.hasKey;
-        this->members = other.members;
-        this->operators = other.operators;
-        this->invited = other.invited;
-        this->hasLimit = other.hasLimit;
-        this->userLimit = other.userLimit;
-        this->inviteOnly = other.inviteOnly;
-        this->topicOpOnly = other.topicOpOnly;
-    }
-    return *this;
+	if (this != &other) {
+		this->name = other.name;
+		this->topic = other.topic;
+		this->key = other.key;
+		this->hasKey = other.hasKey;
+		this->members = other.members;
+		this->operators = other.operators;
+		this->invited = other.invited;
+		this->hasLimit = other.hasLimit;
+		this->userLimit = other.userLimit;
+		this->inviteOnly = other.inviteOnly;
+		this->topicOpOnly = other.topicOpOnly;
+	}
+	return *this;
 }
 
-Channel::~Channel() {}
-
-// Getters
+Channel::~Channel() {
+}
 
 std::string Channel::getName() const {
 	return this->name;
@@ -112,8 +112,6 @@ bool Channel::isInvited(int fd) const {
 	return invited.count(fd) != 0;
 }
 
-// Setters
-
 void Channel::setName(const std::string& name) {
 	this->name = name;
 }
@@ -127,7 +125,7 @@ void Channel::setKey(const std::string& key) {
 	this->hasKey = true;
 }
 
-void Channel::removeKey()  {
+void Channel::removeKey() {
 	this->key.clear();
 	this->hasKey = false;
 }

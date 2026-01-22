@@ -6,60 +6,69 @@
 /*   By: drobert <marvin@42.fr>                     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/15 12:43:46 by drobert           #+#    #+#             */
-/*   Updated: 2026/01/22 18:00:00 by drobert          ###   ########.fr       */
+/*   Updated: 2026/01/22 20:00:00 by drobert          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
 
 Client::Client()
-	: fd(-1),
-	  ip("")
-{
+	: fd(-1)
+	, ip("")
+	, outbuf("")
+	, inbuf("")
+	, nick("")
+	, user("")
+	, realname("")
+	, invited()
+	, registered(false)
+	, authed(false) {
 }
 
-Client::Client(int fd, std::string ip) {
-	this->fd = fd;
-	this->ip = ip;
-	outbuf = "";
-	inbuf = "";
-	nick = "";
-	user = "";
-	realname = "";
-	registered = false;
-	authed = false;
+Client::Client(int fd, std::string ip)
+	: fd(fd)
+	, ip(ip)
+	, outbuf("")
+	, inbuf("")
+	, nick("")
+	, user("")
+	, realname("")
+	, invited()
+	, registered(false)
+	, authed(false) {
 }
 
-Client::Client(const Client& other) {
-    this->fd = other.fd;
-    this->ip = other.ip;
-    this->outbuf = other.outbuf;
-    this->inbuf = other.inbuf;
-    this->nick = other.nick;
-    this->user = other.user;
-    this->realname = other.realname;
-    this->registered = other.registered;
-    this->authed = other.authed;
+Client::Client(const Client& other)
+	: fd(other.fd)
+	, ip(other.ip)
+	, outbuf(other.outbuf)
+	, inbuf(other.inbuf)
+	, nick(other.nick)
+	, user(other.user)
+	, realname(other.realname)
+	, invited(other.invited)
+	, registered(other.registered)
+	, authed(other.authed) {
 }
 
 Client& Client::operator=(const Client& other) {
-    if (this != &other) {
-        this->fd = other.fd;
-	    this->ip = other.ip;
+	if (this != &other) {
+		this->fd = other.fd;
+		this->ip = other.ip;
 		this->outbuf = other.outbuf;
 		this->inbuf = other.inbuf;
 		this->nick = other.nick;
 		this->user = other.user;
 		this->realname = other.realname;
+		this->invited = other.invited;
 		this->registered = other.registered;
 		this->authed = other.authed;
-    }
-    return *this;
+	}
+	return *this;
 }
 
-Client::~Client() {}
-
-// Getters (const versions)
+Client::~Client() {
+}
 
 int Client::getFd() const {
 	return this->fd;
@@ -92,18 +101,17 @@ std::string Client::getRealname() const {
 std::string Client::getPrefix() const {
 	std::string n = nick.empty() ? "*" : nick;
 	std::string u = user.empty() ? "unknown" : user;
-	return n + "!" + u + "@" + (ip.empty() ? "0.0.0.0" : ip);
+	std::string i = ip.empty() ? "0.0.0.0" : ip;
+	return n + "!" + u + "@" + i;
 }
 
 bool Client::isRegistered() const {
-	return this->registered;	
+	return this->registered;
 }
 
 bool Client::isAuthed() const {
-	return this->authed;	
+	return this->authed;
 }
-
-// Getters (non-const versions)
 
 std::string& Client::getOutbuf() {
 	return this->outbuf;
@@ -113,26 +121,24 @@ std::string& Client::getInbuf() {
 	return this->inbuf;
 }
 
-// Setters
-
 void Client::setFd(const int fd) {
 	this->fd = fd;
 }
 
 void Client::setIp(const std::string& ip) {
-	this->ip = ip;	
+	this->ip = ip;
 }
 
 void Client::setOutbuf(const std::string& outbuf) {
-	this->outbuf = outbuf;	
+	this->outbuf = outbuf;
 }
 
 void Client::setInbuf(const std::string& inbuf) {
-	this->inbuf = inbuf;	
+	this->inbuf = inbuf;
 }
 
 void Client::setNick(const std::string& nick) {
-	this->nick = nick;	
+	this->nick = nick;
 }
 
 void Client::settUser(const std::string& user) {
@@ -140,7 +146,7 @@ void Client::settUser(const std::string& user) {
 }
 
 void Client::setRealname(const std::string& realname) {
-	this->realname = realname;	
+	this->realname = realname;
 }
 
 void Client::addRegistered() {
@@ -148,7 +154,7 @@ void Client::addRegistered() {
 }
 
 void Client::removeRegistered() {
-	this->registered = false;	
+	this->registered = false;
 }
 
 void Client::addAuthed() {
@@ -156,5 +162,5 @@ void Client::addAuthed() {
 }
 
 void Client::removeAuthed() {
-	this->authed = false;	
+	this->authed = false;
 }
