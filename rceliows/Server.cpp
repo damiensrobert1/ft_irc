@@ -44,10 +44,7 @@ bool Server::start() {
 }
 
 bool Server::setNonBlocking(int fd) {
-	int flags = fcntl(fd, F_GETFL, 0);
-	if (flags < 0)
-		return false;
-	return (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
+    return (fcntl(fd, F_SETFL, O_NONBLOCK) == 0);
 }
 
 bool Server::createListenSocket() {
